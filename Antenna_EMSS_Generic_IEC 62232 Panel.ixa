@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<antennaModels xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" packageLevel="NPowerPorts">
+  <antennaManufacturer abbreviation="Generic" name="Generic">
+    <antennaModel dataSource="EMSS" kind="1" type="panel" name="IEC 62232 Panel" version="1" width="0.3" depth="0.2" height="2.25">
+      <configuration horizontalCount="1" verticalCount="1" rotationAroundAxis="0" />
+      <frequencyBand frequency="900000000" elementSpacing="0.25" numberOfPorts="2" polarization="Cross" specifiedSimulationPower="0" apertureDiameter="0" gainDbi="0">
+        <electricalTilt value="0">
+          <amplitudeList>0.25627 0.2681 0.35574 0.41747 0.43972 0.41747 0.35574 0.2681 0.25627</amplitudeList>
+          <phaseList>0 0 0 0 0 0 0 0 0</phaseList>
+          <patternList>eNp1lQly7CAMRK+SC8RlAWK5/8U+/cAy+ZNUal7FAsuotfCdypW+RPtgOpgPFuiwwQ7HpPOus9PZ6VeF2qP/Kh4rOype6rXsDfY/2I6d5fWD73Z8zY4TeUSQOV3m/YwlYUlYEqeR1fBl+DL23ey72Xdjv/UNG7JPVljg3G8de5efSYcZ6q3GamO1sdpY1TORGjEaMRoxmp7Rz9DSiHRSa/JAtJMVFqg1Yp5s0GGGOgnxTzboUG/pZ3g0PKKFoYWhxWSDDjOcHhFkaA05UGNaunx1ueoyd5mnpV2gCkWY5vkqGiABCiBAlXeXdzLt+jAVhgTzAQGoRVJOnSLB9IAIaEDy84UtC9Or0k6tkHZyTNFQD6SfepohEjmBowrBowwCoM6CtP36RqlbrlFrowoeKIEcSD9h/+P+5e+3fZ+u3m+8333PUn+etO8QVjQrqhVfjsA9xECWvlUK1ZaIJTStIfZAefpw56JEftrOWXlyuLLpkeFOzlfuVxV4VIaKJ6qmRCVRWENVZkIWXGgCRWpCFlxoAvVMZWfBo7zHU/NR/6sX6JrolqdzanRUeruMNTTZnbi68ulQPzp30NEGM1xd3+BgFhjM0GGDgyliMEOHa96sWWTvFOJUdKXRoMZvz7UCK5R9xMxDG0OcNRfXjIx5WWOOUkkxX9ueumlPZIc9ZjQ6TPbjViox35+7psQdUD9ulnVr6Mvt+fHWZqw+t0w93l1+1jfGcc/4ccOxetw47bh3ysfNmf4BxLZUVA==</patternList>
+        </electricalTilt>
+        <frequencyBandSpecification specifiedGainDbi="17" specifiedHorizontalBeamwidthDegrees="85" specifiedVerticalBeamwidthDegrees="8.5" />
+      </frequencyBand>
+      <geometrySpecification specifiedHeightM="2.25" />
+    </antennaModel>
+  </antennaManufacturer>
+</antennaModels>
