@@ -104,7 +104,6 @@ def GetField(filenameE,filenameH):
         df['Im(Ey)'] = df['Im(Ey)'].astype(float)
         df['Re(Ez)'] = df['Re(Ez)'].astype(float)
         df['Im(Ez)'] = df['Im(Ez)'].astype(float)
-        df = getSdata(df)
     file.close()
 
     with open(filenameH, 'r') as file:
@@ -127,6 +126,10 @@ def GetField(filenameE,filenameH):
     df['Re(Hz)'] = df['Re(Hz)'].astype(float)
     df['Im(Hz)'] = dataH[:,5]
     df['Im(Hz)'] = df['Im(Hz)'].astype(float)
+    df['|E|'] = GetEPhasor(df)
+    df['|H|'] = GetHPhasor(df)
+    print(df)
+    #print(GetEPhasor(df))
     return fieldSolved(name,Fileformat,source,date,solverV,configuration,frequency,coordSystem, xSamples, ySamples, zSamples,df)
 
 
@@ -158,12 +161,14 @@ def plotPowerLine(line,axis):
 def GetEPhasor(data):
     dfE = data[['X','Y','Z']].copy()
     dfE['|E|'] = (data['Re(Ex)']  + data['Im(Ex)'])**2 + (data['Re(Ey)']  + data['Im(Ey)'])*2  + (data['Re(Ez)'] + data['Im(Ez)'])**2 
-    return dfE
+    dfE['|E|'] =  dfE['|E|'].astype(float)
+    return dfE['|E|']
 
 def GetHPhasor(data):
     dfH = data[['X','Y','Z']].copy()
     dfH['|H|'] = (data['Re(Hx)']  + data['Im(Hx)'])**2 + (data['Re(Hy)']  + data['Im(Hy)'])*2  + (data['Re(Hz)'] + data['Im(Hz)'])**2 
-    return dfH
+    dfH['|H|'] =  dfH['|H|'].astype(float)
+    return dfH['|H|']
 
 
 def plot2DColor(df,X,Y):
@@ -173,5 +178,5 @@ def plot2DColor(df,X,Y):
     plt.show()
 
 def plot2D(df,X,Y,field):
-    plt.scatter(x =df[X],y=df[Y],c =df[field],cmap = 'rocket')
+    plt.scatter(x =df[X],y=df[Y],c =df[field],cmap = 'Reds')
     plt.show()

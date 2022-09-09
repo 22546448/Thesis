@@ -1,6 +1,5 @@
 # ReadMe
-Note all the instructions that follow are for windows users and wsl2 won't work (ive tried)
-
+ 
 Python version:
 3.10.4
 Pip version:
