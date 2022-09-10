@@ -4,8 +4,7 @@ from kiwisolver import Solver
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
-import math
-
+from pandas import HDFStore
 
 
 
@@ -174,6 +173,10 @@ def GetField(filenameE,filenameH):
     df['|E|'] = df['|E|'].astype(float)
     df['|H|'] = df['Re(Hx)']  + df['Im(Hx)']**2 + df['Re(Hy)']**2  + df['Im(Hy)']**2  + df['Re(Hz)']**2 + df['Im(Hz)']**2 
     df['|H|'] = df['|H|'].astype(float)
+
+    hdf = HDFStore('hdf_file.h5')
+    hdf.put('EMF', df, format='table', data_columns=True) #put data in hdf file
+    hdf.close()
     return fieldSolved(name,Fileformat,source,date,solverV,configuration,frequency,coordSystem, xSamples, ySamples, zSamples,df)
 
 

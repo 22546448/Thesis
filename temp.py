@@ -1,10 +1,23 @@
-from sympy.physics.vector import ReferenceFrame
-from sympy.physics.vector import curl
-R = ReferenceFrame('R')
+from fileinput import close
+import pandas as pd
+import numpy as np
+from pandas import HDFStore
+#hdf = HDFStore('hdf_file.h5')
 
-F = R[1]**2 * R[2] * R.x - R[0]*R[1] * R.y + R[2]**2 * R.z
+#df = pd.read_csv("iris.csv")  # read Iris file
+#hdf.put('key1', df, format='table', data_columns=True) #put data in hdf file
 
-G = curl(F, R) 
+#df2 = pd.DataFrame(np.random.rand(5,3),columns=['X','Y','Z']) #dataframe df2
+#hdf.put('key2',df2) # to add a dataframe to the hdf file
+#df3= pd.DataFrame(np.random.rand(10,2),columns=['X','Y'])
+#hdf.put('/group1/key3',df3) # to add a group with df3 in the hdf file
+#hdf =HDFStore('hdf_file.h5', mode='r')
+#data = hdf.get('/key1')
+#hdf.close()
 
 
-print(F)
+hdf =HDFStore('hdf_file.h5', mode='r')
+data = hdf.get('/key1')
+
+new = data.loc[data['class'] == 'Iris-setosa']
+print(new)
