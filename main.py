@@ -9,11 +9,8 @@ df = surface1.dataframe
 
 #plot2DColor(S,'X','Y')
 
-#plot2D(df,'X','Y','|E|')
-#plot2D(df,'X','Y','|H|')
-print(df)
-surface1.plot2D(df,'X','Y','Im(Ex)')
 
-
+surface1.plot2D(df,'X','Y','S(E)')
+#surface1.plot2D(df,'X','Y','Im(Ex)')
 
  

@@ -5,7 +5,11 @@ from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
 from pandas import HDFStore
+import math
 
+import warnings
+from tables import NaturalNameWarning
+warnings.filterwarnings('ignore', category=NaturalNameWarning)
 
 
 class fieldSolved:
@@ -65,6 +69,7 @@ class fieldSolved:
         dfE['|E|'] =  dfE['|E|'].astype(float)
         return dfE['|E|']
 
+    @staticmethod
     def GetHPhasor(data):
         dfH = data[['X','Y','Z']].copy()
         dfH['|H|'] = (data['Re(Hx)']  + data['Im(Hx)'])**2 + (data['Re(Hy)']  + data['Im(Hy)'])*2  + (data['Re(Hz)'] + data['Im(Hz)'])**2 
@@ -138,15 +143,10 @@ def GetField(filenameE,filenameH):
                 dataT[i] = line[4:-1].split('   ')
                 i+=1
         df = pd.DataFrame(dataT,columns=['X','Y','Z','Re(Ex)','Im(Ex)','Re(Ey)','Im(Ey)','Re(Ez)','Im(Ez)'])
-        df['X'] = df['X'].astype(float)
-        df['Y'] = df['Y'].astype(float)
-        df['Z'] = df['Z'].astype(float)
-        df['Re(Ex)'] = df['Re(Ex)'].astype(float)
-        df['Im(Ex)'] = df['Im(Ex)'].astype(float)
-        df['Re(Ey)'] = df['Re(Ey)'].astype(float)
-        df['Im(Ey)'] = df['Im(Ey)'].astype(float)
-        df['Re(Ez)'] = df['Re(Ez)'].astype(float)
-        df['Im(Ez)'] = df['Im(Ez)'].astype(float)
+        df = df.astype(float)
+        df['R'] = np.sqrt(df['X']**2 + df['Y']**2 + df['Z']**2)
+        df['phi'] = np.arccos(df['Z']/df['R'])
+        df['theta'] = np.arccos(df['X']/(df['R']*np.sin(df['phi'])))
     file.close()
 
     with open(filenameH, 'r') as file:
@@ -158,25 +158,19 @@ def GetField(filenameE,filenameH):
                 i+=1
     file.close()
     df['Re(Hx)'] = dataH[:,0]
-    df['Re(Hx)'] = df['Re(Hx)'].astype(float)
     df['Im(Hx)'] = dataH[:,1]
-    df['Im(Hx)'] = df['Im(Hx)'].astype(float)
     df['Re(Hy)'] = dataH[:,2]
-    df['Re(Hy)'] = df['Re(Hy)'].astype(float)
     df['Im(Hy)'] = dataH[:,3]
-    df['Im(Hy)'] = df['Im(Hy)'].astype(float)
     df['Re(Hz)'] = dataH[:,4]
-    df['Re(Hz)'] = df['Re(Hz)'].astype(float)
     df['Im(Hz)'] = dataH[:,5]
-    df['Im(Hz)'] = df['Im(Hz)'].astype(float)
-    df['|E|'] = df['Re(Ex)']**2  + df['Im(Ex)']**2 + df['Re(Ey)']**2  + df['Im(Ey)']**2  + df['Re(Ez)']**2 + df['Im(Ez)']**2 
-    df['|E|'] = df['|E|'].astype(float)
-    df['|H|'] = df['Re(Hx)']  + df['Im(Hx)']**2 + df['Re(Hy)']**2  + df['Im(Hy)']**2  + df['Re(Hz)']**2 + df['Im(Hz)']**2 
-    df['|H|'] = df['|H|'].astype(float)
+    df['|E|'] = np.sqrt(df['Re(Ex)']**2  + df['Im(Ex)']**2 + df['Re(Ey)']**2  + df['Im(Ey)']**2  + df['Re(Ez)']**2 + df['Im(Ez)']**2)**(1/2)
+    df['|H|'] = np.sqrt(df['Re(Hx)']  + df['Im(Hx)']**2 + df['Re(Hy)']**2  + df['Im(Hy)']**2  + df['Re(Hz)']**2 + df['Im(Hz)']**2)**(1/2)
+    df['S(E)'] = (df['|E|']**2)/(3770)
 
-    hdf = HDFStore('hdf_file.h5')
-    hdf.put('EMF', df, format='table', data_columns=True) #put data in hdf file
-    hdf.close()
+
+    #hdf = HDFStore('hdf_file.h5')
+    #hdf.put('EMF', df, format='table', data_columns=True) #put data in hdf file
+    #hdf.close()
     return fieldSolved(name,Fileformat,source,date,solverV,configuration,frequency,coordSystem, xSamples, ySamples, zSamples,df)
 
 
