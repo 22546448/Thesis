@@ -1,11 +1,15 @@
-import imp
-from EMFFeko import CreateSurface,CreateAntenna,CreatedField, antenna
+from EMFFeko import GetField
+from CreateEMF import Surface,Antenna,Field
 from matplotlib import pyplot as plt
 
 #surface1 = GetField("IEC-62232-panel-antenna_2Dxy.efe","IEC-62232-panel-antenna_2Dxy.hfe")
 
-plane1 = CreateSurface(-5,100,5,-5,100,5)
-antenna = antenna(f=900,P=50,G=90)
+
+
+plane1 = Surface(-5,100,5,-5,100,5)
+antenna1 = Antenna(f=900,P=50,G=30)
+surface2 = Field(antenna1,plane1)
+surface2.plot2DZones(show = True)
 
 
 

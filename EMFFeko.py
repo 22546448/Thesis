@@ -7,22 +7,17 @@ import numpy as np
 import pandas as pd
 from pandas import HDFStore
 import math
+from Field import Field
 
 import warnings
 from tables import NaturalNameWarning
 warnings.filterwarnings('ignore', category=NaturalNameWarning)
 
-class antenna:
-    def __init__(self,P,G,f,x=0,y=0,z=0):
-        self.x = x
-        self.y = y
-        self.z = z
-        self.P = P
-        self.G = G
-        self.f = f
 
-class Fekofield:
+
+class Fekofield(Field):
     def __init__(self,name,Fileformat,source,date,solverV,configuration,frequency,coordSystem, xSamples, ySamples, zSamples,df):
+        super().__init__(df,frequency)
         self.name = name
         self.format = Fileformat
         self.source = source
@@ -34,8 +29,6 @@ class Fekofield:
         self.xSamples = xSamples
         self.ySamples = ySamples
         self.zSamples = zSamples
-        self.df = df
-
 
         i = 0
         if xSamples > 1: i+=1
@@ -50,61 +43,7 @@ class Fekofield:
             elif ySamples > 1 and zSamples > 1:
                 self.axis = ['Y','Z']
 
-    def PowerAtPoint(data):
-        S = np.zeros(len(data))
-        for j in range(len(data)):
-            for i in range(3,9):
-                S[j] += data[j][i]**2
-        S = S/(2*377) 
-        return(S)
-
-    def plotPowerLine(line,axis):
-        plt.plot(line[axis],line['S(E)'])
-        plt.show() 
-
-    def getS(self):
-        dfS = self.df[['X','Y','Z','S(E)']].copy()
-        dfS = dfS.astype(float)
-        return dfS
-
-    def GetE(self):
-        dfE = self.df[['X','Y','Z','|E|']].copy()
-        dfE =  dfE.astype(float)
-        return dfE
-
-    def GetH(self):
-        dfH = self.df[['X','Y','Z','|H|']].copy()
-        dfH =  dfH.astype(float)
-        return dfH
-
-    def plot2DZones(self,GPcolor = 'blue',Ocolor = 'yellow',RZcolor = 'red',xfig = 6,yfig = 4,show = False):
-        colors = {'General Public':GPcolor,'Occupation':Ocolor,'Restricted Zone':RZcolor}
-        #plt.scatter(x=self.df[X], y=self.df[Y],c= self.df['Restriction'].map(colors))
-
-        groups = self.df.groupby('Restriction')
-       
-        fig, ax = plt.subplots(1, figsize=(xfig,yfig))
-        for label, group in groups:
-            ax.scatter(group[self.axis[0]], group[self.axis[1]], 
-                    c=group['Restriction'].map(colors), label=label)
-
-        ax.set(xlabel= self.axis[0], ylabel=self.axis[1])
-        ax.set_title("Restricions with %d signal" % self.frequency)
-        ax.legend(title='Restriction levels')
-        if show:
-            plt.show()
-
-    def plot2D(self,field='S(E)',color = 'Reds'):
-        fig, ax = plt.subplots(1)
-        ax1 =ax.scatter(x =self.df[self.axis[0]],y= self.df[self.axis[1]],c =self.df[field],cmap = color)
-        plt.colorbar(ax1)
-        ax.set_xlabel(self.axis[0])
-        ax.set_ylabel(self.axis[1])
-        ax.set_title("{} over {}{} plane".format(field,self.axis[0],self.axis[1]))
-
-
-        
-        
+                
 def GetField(filenameE,filenameH):
     name = ''
     type = ''
@@ -183,30 +122,7 @@ def GetField(filenameE,filenameH):
     df['|H|'] = np.sqrt(df['Re(Hx)']**2  + df['Im(Hx)']**2 + df['Re(Hy)']**2  + df['Im(Hy)']**2  + df['Re(Hz)']**2 + df['Im(Hz)']**2)
     df['S(E)'] = (df['|E|']**2)/(3770)
 
-    frequency = frequency*(10**-6)
-    frequency = 10
-    df['Restriction'] ='Restricted Zone'
-    if frequency < 0.3:
-        df['Restriction'] ='General Public'
-    elif frequency >= 0.3 and frequency < 3:
-        df.loc[df['S(E)'] < 100,'Restriction'] = 'Occupation'
-    elif frequency >= 3 and frequency < 30:
-        df.loc[df['S(E)'] < 900/(frequency**2),'Restriction'] = 'Occupation'
-    if frequency >= 0.3 and frequency < 1.34:
-        df.loc[df['S(E)'] < 100,'Restriction'] = 'General Public'
-    elif frequency >= 1.34 and frequency < 30:
-        df.loc[df['S(E)'] < 180/(frequency**2),'Restriction'] = 'General Public'
-    if frequency >= 30 and frequency < 300:
-        df.loc[df['S(E)'] < 1,'Restriction'] = 'Occupation'
-        df.loc[df['S(E)'] < 0.2,'Restriction'] = 'General Public'
-    elif frequency >= 300 and frequency < 1500:
-        df.loc[df['S(E)'] < frequency/300,'Restriction'] = 'Occupation'
-        df.loc[df['S(E)'] < frequency/1500,'Restriction'] = 'General Public'
-    elif frequency >= 1500 and frequency < 100000:
-        df.loc[df['S(E)'] < 5,'Restriction'] = 'Occupation'
-        df.loc[df['S(E)'] < 1,'Restriction'] = 'General Public'
 
-       
     
 
     #hdf = HDFStore('hdf_file.h5')
@@ -214,44 +130,6 @@ def GetField(filenameE,filenameH):
     #hdf.close()
     return Fekofield(name,Fileformat,source,date,solverV,configuration,frequency,coordSystem, xSamples, ySamples, zSamples,df)
 
-
-class surface:
-    def __init__(self,xMin,xStep,xMax,yMin,yStep,yMax,z=0):
-        self.xMin = xMin
-        self.xMax = xMax
-        self.xStep = xStep
-        self.yMin = yMin
-        self.yMax = yMax
-        self.yStep = yStep
-        self.z = z
-
-def CreateSurface(xMin,xStep,xMax,yMin,yStep,yMax,z=0):
-    x = np.linspace(xMin,xMax,xStep)
-    y = np.linspace(yMin,yMax,yStep)
-
-    xv,yv= np.meshgrid(x,y)
-
-    df = pd.DataFrame({
-        'X':xv.ravel(),
-        'Y':yv.ravel(),
-        'Z':z
-    })
-    df = df.astype(float)
-    return df
-
-
-def CreateAntenna(P,G,f,x=0,y=0,z=0):
-    return antenna(P,G,f,x,y,z)
-
-
-class CreatedField(Fekofield):
-    def __init__(self,antenna,space):
-            self.df = space
-            self.antenna = antenna
-
-            self.df['R'] = np.sqrt((space['X']-antenna.x)**2 + (space['Y']-antenna.y)**2 + (space['Z']-antenna.z)**2)
-            self.df.loc[space['R'] < 0.5,'R'] = 0.5
-            self.df['S'] = (antenna.P*antenna.G)/(4*np.pi*(space['R'])**2)
 
 
 #def CreateField(antenna,source='IEC-62232-panel-antenna',date=0,configuration='Created',frequency = f)
