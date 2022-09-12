@@ -1,4 +1,5 @@
 from fileinput import filename
+from platform import freedesktop_os_release
 from unittest import result
 from kiwisolver import Solver
 from matplotlib import pyplot as plt
@@ -55,12 +56,9 @@ class fieldSolved:
 
     def getSdata(data):
         data['S(E)'] = data['Re(Ex)']**2  + data['Im(Ex)']**2 + data['Re(Ey)']**2  + data['Im(Ey)']*2  + data['Re(Ez)']**2 + data['Im(Ez)']**2 
-        data ['S(E)']= data['S(E)']/(2*337)
+        data ['S(E)']= data['S(E)']/(3370)
         data['S(E)'] = data['S(E)'].astype(float)
 
-        data['Restriction'] ='General Public'
-        data.loc[data['S(E)'] > 20,'Restriction'] = 'Occupation'
-        data.loc[data['S(E)'] > 100,'Restriction'] = 'Restricted Zone'
         return data
 
     def GetEPhasor(data):
@@ -80,12 +78,12 @@ class fieldSolved:
     def plot2DZones(df,X,Y):
         colors = {'General Public':'blue','Occupation':'yellow','Restricted Zone':'red'}
         plt.scatter(x=df[X], y=df[Y],c= df['Restriction'].map(colors))
-        plt.show()
 
     @staticmethod
     def plot2D(df,X,Y,field):
-        plt.scatter(x =df[X],y=df[Y],c =df[field],cmap = 'Reds')
-        plt.show()
+        graph = plt.scatter(x =df[X],y=df[Y],c =df[field],cmap = 'Reds')
+        plt.colorbar(graph)
+        
         
 def GetField(filenameE,filenameH):
     name = ''
@@ -123,7 +121,7 @@ def GetField(filenameE,filenameH):
             elif "#Request Name:" in line:
                 name = line[:-1].split("#Request Name:",1)[1] 
             elif "#Frequency: " in line:
-                frequency = line[:-1].split("#Frequency: ",1)[1]  
+                frequency = int(float(line[:-1].split("#Frequency:   ",1)[1]))  
             elif "#Coordinate System: " in line:
                 coordSystem = line[:-1].split("#Coordinate System: ",1)[1]
             elif "#No. of X Samples: " in line:
@@ -163,10 +161,35 @@ def GetField(filenameE,filenameH):
     df['Im(Hy)'] = dataH[:,3]
     df['Re(Hz)'] = dataH[:,4]
     df['Im(Hz)'] = dataH[:,5]
-    df['|E|'] = np.sqrt(df['Re(Ex)']**2  + df['Im(Ex)']**2 + df['Re(Ey)']**2  + df['Im(Ey)']**2  + df['Re(Ez)']**2 + df['Im(Ez)']**2)**(1/2)
-    df['|H|'] = np.sqrt(df['Re(Hx)']  + df['Im(Hx)']**2 + df['Re(Hy)']**2  + df['Im(Hy)']**2  + df['Re(Hz)']**2 + df['Im(Hz)']**2)**(1/2)
+    df['|E|'] = np.sqrt(df['Re(Ex)']**2  + df['Im(Ex)']**2 + df['Re(Ey)']**2  + df['Im(Ey)']**2  + df['Re(Ez)']**2 + df['Im(Ez)']**2)
+    df['|H|'] = np.sqrt(df['Re(Hx)']  + df['Im(Hx)']**2 + df['Re(Hy)']**2  + df['Im(Hy)']**2  + df['Re(Hz)']**2 + df['Im(Hz)']**2)
     df['S(E)'] = (df['|E|']**2)/(3770)
 
+    frequency = frequency*(10**-6)
+    print(frequency)
+    df['Restriction'] ='Restricted Zone'
+    if frequency >= 0.3 and frequency < 3:
+        df.loc[df['S(E)'] < 100,'Restriction'] = 'Occupation'
+    elif frequency >= 3 and frequency < 30:
+        df.loc[df['S(E)'] > 900/(frequency**2),'Restriction'] = 'Occupation'
+    if frequency >= 0.3 and frequency < 1.34:
+        df.loc[df['S(E)'] < 100,'Restriction'] = 'General Public'
+    elif frequency >= 1.34 and frequency < 30:
+        df.loc[df['S(E)'] < 180/(frequency**2),'Restriction'] = 'General Public'
+    if frequency >= 30 and frequency < 300:
+        df.loc[df['S(E)'] < 1,'Restriction'] = 'Occupation'
+        df.loc[df['S(E)'] < 0.2,'Restriction'] = 'General Public'
+    if frequency >= 300 and frequency < 1500:
+        print('true')
+        df.loc[df['S(E)'] < frequency/300,'Restriction'] = 'Occupation'
+        df.loc[df['S(E)'] < frequency/1500,'Restriction'] = 'General Public'
+    if frequency >= 1500 and frequency < 100000:
+        df.loc[df['S(E)'] < 5,'Restriction'] = 'Occupation'
+        df.loc[df['S(E)'] < 1,'Restriction'] = 'General Public'
+
+       
+    
+    print(df['S(E)'])
 
     #hdf = HDFStore('hdf_file.h5')
     #hdf.put('EMF', df, format='table', data_columns=True) #put data in hdf file
