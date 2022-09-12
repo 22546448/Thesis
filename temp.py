@@ -3,25 +3,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # generate data
-n_obs = 100
-df = pd.DataFrame({'Community School?': np.random.choice(['Yes', 'No'], size=n_obs),
-                   'Economic Need Index': np.random.uniform(size=n_obs),
-                   'School Income Estimate': np.random.normal(loc=n_obs, size=n_obs)})
+nx,ny = (4,2)
+x = np.linspace(0,1,nx)
+y = np.linspace(0,1,ny)
 
-# your data pre-processing steps
-df['color-code'] = np.where(df['Community School?']=='Yes', 'blue', 'red')
-sc_income = df[~df['Economic Need Index'].isnull() & ~df['School Income Estimate'].isnull()]
 
-# plot Economic Need Index vs School Income Estimate by group
-groups = sc_income.groupby('Community School?')
+xv,yv= np.meshgrid(x,y)
+print(xv,yv)
 
-fig, ax = plt.subplots(1, figsize=(40,20))
+df = pd.DataFrame({
+       'X':xv.ravel(),
+       'Y':yv.ravel()
+})
 
-for label, group in groups:
-    ax.scatter(group['Economic Need Index'], group['School Income Estimate'], 
-               c=group['color-code'], label=label)
+df['R'] = np.sqrt(df['X']**2 + df['Y']**2)
+print(df)
 
-ax.set(xlabel='Economic Need', ylabel='School Income $', 
-       title='Economic Need vs. School Income')
-ax.legend(title='Community School?')
+plt.scatter(x=df['X'],y=df['Y'],c=df['R'],cmap='Reds')
 plt.show()
