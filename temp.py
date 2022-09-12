@@ -1,23 +1,27 @@
-from fileinput import close
 import pandas as pd
 import numpy as np
-from pandas import HDFStore
-#hdf = HDFStore('hdf_file.h5')
+import matplotlib.pyplot as plt
 
-#df = pd.read_csv("iris.csv")  # read Iris file
-#hdf.put('key1', df, format='table', data_columns=True) #put data in hdf file
+# generate data
+n_obs = 100
+df = pd.DataFrame({'Community School?': np.random.choice(['Yes', 'No'], size=n_obs),
+                   'Economic Need Index': np.random.uniform(size=n_obs),
+                   'School Income Estimate': np.random.normal(loc=n_obs, size=n_obs)})
 
-#df2 = pd.DataFrame(np.random.rand(5,3),columns=['X','Y','Z']) #dataframe df2
-#hdf.put('key2',df2) # to add a dataframe to the hdf file
-#df3= pd.DataFrame(np.random.rand(10,2),columns=['X','Y'])
-#hdf.put('/group1/key3',df3) # to add a group with df3 in the hdf file
-#hdf =HDFStore('hdf_file.h5', mode='r')
-#data = hdf.get('/key1')
-#hdf.close()
+# your data pre-processing steps
+df['color-code'] = np.where(df['Community School?']=='Yes', 'blue', 'red')
+sc_income = df[~df['Economic Need Index'].isnull() & ~df['School Income Estimate'].isnull()]
 
+# plot Economic Need Index vs School Income Estimate by group
+groups = sc_income.groupby('Community School?')
 
-hdf =HDFStore('hdf_file.h5', mode='r')
-data = hdf.get('/key1')
+fig, ax = plt.subplots(1, figsize=(40,20))
 
-new = data.loc[data['class'] == 'Iris-setosa']
-print(new)
+for label, group in groups:
+    ax.scatter(group['Economic Need Index'], group['School Income Estimate'], 
+               c=group['color-code'], label=label)
+
+ax.set(xlabel='Economic Need', ylabel='School Income $', 
+       title='Economic Need vs. School Income')
+ax.legend(title='Community School?')
+plt.show()

@@ -14,7 +14,7 @@ warnings.filterwarnings('ignore', category=NaturalNameWarning)
 
 
 class fieldSolved:
-    def __init__(self,name,Fileformat,source,date,solverV,configuration,frequency,coordSystem, xSamples, ySamples, zSamples,dataframe):
+    def __init__(self,name,Fileformat,source,date,solverV,configuration,frequency,coordSystem, xSamples, ySamples, zSamples,df):
         self.name = name
         self.format = Fileformat
         self.source = source
@@ -26,7 +26,7 @@ class fieldSolved:
         self.xSamples = xSamples
         self.ySamples = ySamples
         self.zSamples = zSamples
-        self.dataframe = dataframe
+        self.df = df
 
 
         i = 0
@@ -54,35 +54,46 @@ class fieldSolved:
         plt.plot(line[axis],line['S(E)'])
         plt.show() 
 
-    def getSdata(data):
-        data['S(E)'] = data['Re(Ex)']**2  + data['Im(Ex)']**2 + data['Re(Ey)']**2  + data['Im(Ey)']*2  + data['Re(Ez)']**2 + data['Im(Ez)']**2 
-        data ['S(E)']= data['S(E)']/(3370)
-        data['S(E)'] = data['S(E)'].astype(float)
+    def getS(self):
+        dfS = self.df[['X','Y','Z','S(E)']].copy()
+        dfS = dfS.astype(float)
+        return dfS
 
-        return data
+    def GetE(self):
+        dfE = self.df[['X','Y','Z','|E|']].copy()
+        dfE =  dfE.astype(float)
+        return dfE
 
-    def GetEPhasor(data):
-        dfE = data[['X','Y','Z']].copy()
-        dfE['|E|'] = (data['Re(Ex)']  + data['Im(Ex)'])**2 + (data['Re(Ey)']  + data['Im(Ey)'])*2  + (data['Re(Ez)'] + data['Im(Ez)'])**2 
-        dfE['|E|'] =  dfE['|E|'].astype(float)
-        return dfE['|E|']
+    def GetH(self):
+        dfH = self.df[['X','Y','Z','|H|']].copy()
+        dfH =  dfH.astype(float)
+        return dfH
 
-    @staticmethod
-    def GetHPhasor(data):
-        dfH = data[['X','Y','Z']].copy()
-        dfH['|H|'] = (data['Re(Hx)']  + data['Im(Hx)'])**2 + (data['Re(Hy)']  + data['Im(Hy)'])*2  + (data['Re(Hz)'] + data['Im(Hz)'])**2 
-        dfH['|H|'] =  dfH['|H|'].astype(float)
-        return dfH['|H|']
+    def plot2DZones(self,GPcolor = 'blue',Ocolor = 'yellow',RZcolor = 'red',xfig = 6,yfig = 4,show = False):
+        colors = {'General Public':GPcolor,'Occupation':Ocolor,'Restricted Zone':RZcolor}
+        #plt.scatter(x=self.df[X], y=self.df[Y],c= self.df['Restriction'].map(colors))
 
-    @staticmethod
-    def plot2DZones(df,X,Y):
-        colors = {'General Public':'blue','Occupation':'yellow','Restricted Zone':'red'}
-        plt.scatter(x=df[X], y=df[Y],c= df['Restriction'].map(colors))
+        groups = self.df.groupby('Restriction')
+       
+        fig, ax = plt.subplots(1, figsize=(xfig,yfig))
+        for label, group in groups:
+            ax.scatter(group[self.axis[0]], group[self.axis[1]], 
+                    c=group['Restriction'].map(colors), label=label)
 
-    @staticmethod
-    def plot2D(df,X,Y,field):
-        graph = plt.scatter(x =df[X],y=df[Y],c =df[field],cmap = 'Reds')
-        plt.colorbar(graph)
+        ax.set(xlabel= self.axis[0], ylabel=self.axis[1])
+        ax.set_title("Restricions with %d signal" % self.frequency)
+        ax.legend(title='Restriction levels')
+        if show:
+            plt.show()
+
+    def plot2D(self,field,color = 'Reds'):
+        fig, ax = plt.subplots(1)
+        ax1 =ax.scatter(x =self.df[self.axis[0]],y= self.df[self.axis[1]],c =self.df[field],cmap = color)
+        plt.colorbar(ax1)
+        ax.set_xlabel(self.axis[0])
+        ax.set_ylabel(self.axis[1])
+        ax.set_title("{} over {}{} plane".format(field,self.axis[0],self.axis[1]))
+        ##plt.legend(title='Restriction levels')
         
         
 def GetField(filenameE,filenameH):
@@ -98,8 +109,6 @@ def GetField(filenameE,filenameH):
     xSamples= 0
     ySamples= 0
     zSamples= 0
-    resultType= ''
-    headerLines= ''
     global i
     i = 0
 
@@ -162,7 +171,7 @@ def GetField(filenameE,filenameH):
     df['Re(Hz)'] = dataH[:,4]
     df['Im(Hz)'] = dataH[:,5]
     df['|E|'] = np.sqrt(df['Re(Ex)']**2  + df['Im(Ex)']**2 + df['Re(Ey)']**2  + df['Im(Ey)']**2  + df['Re(Ez)']**2 + df['Im(Ez)']**2)
-    df['|H|'] = np.sqrt(df['Re(Hx)']  + df['Im(Hx)']**2 + df['Re(Hy)']**2  + df['Im(Hy)']**2  + df['Re(Hz)']**2 + df['Im(Hz)']**2)
+    df['|H|'] = np.sqrt(df['Re(Hx)']**2  + df['Im(Hx)']**2 + df['Re(Hy)']**2  + df['Im(Hy)']**2  + df['Re(Hz)']**2 + df['Im(Hz)']**2)
     df['S(E)'] = (df['|E|']**2)/(3770)
 
     frequency = frequency*(10**-6)
