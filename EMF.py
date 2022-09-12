@@ -166,12 +166,14 @@ def GetField(filenameE,filenameH):
     df['S(E)'] = (df['|E|']**2)/(3770)
 
     frequency = frequency*(10**-6)
-    print(frequency)
+    frequency = 10
     df['Restriction'] ='Restricted Zone'
-    if frequency >= 0.3 and frequency < 3:
+    if frequency < 0.3:
+        df['Restriction'] ='General Public'
+    elif frequency >= 0.3 and frequency < 3:
         df.loc[df['S(E)'] < 100,'Restriction'] = 'Occupation'
     elif frequency >= 3 and frequency < 30:
-        df.loc[df['S(E)'] > 900/(frequency**2),'Restriction'] = 'Occupation'
+        df.loc[df['S(E)'] < 900/(frequency**2),'Restriction'] = 'Occupation'
     if frequency >= 0.3 and frequency < 1.34:
         df.loc[df['S(E)'] < 100,'Restriction'] = 'General Public'
     elif frequency >= 1.34 and frequency < 30:
@@ -179,17 +181,15 @@ def GetField(filenameE,filenameH):
     if frequency >= 30 and frequency < 300:
         df.loc[df['S(E)'] < 1,'Restriction'] = 'Occupation'
         df.loc[df['S(E)'] < 0.2,'Restriction'] = 'General Public'
-    if frequency >= 300 and frequency < 1500:
-        print('true')
+    elif frequency >= 300 and frequency < 1500:
         df.loc[df['S(E)'] < frequency/300,'Restriction'] = 'Occupation'
         df.loc[df['S(E)'] < frequency/1500,'Restriction'] = 'General Public'
-    if frequency >= 1500 and frequency < 100000:
+    elif frequency >= 1500 and frequency < 100000:
         df.loc[df['S(E)'] < 5,'Restriction'] = 'Occupation'
         df.loc[df['S(E)'] < 1,'Restriction'] = 'General Public'
 
        
     
-    print(df['S(E)'])
 
     #hdf = HDFStore('hdf_file.h5')
     #hdf.put('EMF', df, format='table', data_columns=True) #put data in hdf file
