@@ -7,14 +7,12 @@ import numpy as np
 
 from EMFIXUS import IXUSField
 
-surface1 = GetField("IEC-62232-panel-antenna (4)_NearField1.efe","IEC-62232-panel-antenna (4)_NearField1.hfe")
+#surface1 = GetField("IEC-62232-panel-antenna (4)_NearField1.efe","IEC-62232-panel-antenna (4)_NearField1.hfe")
+#surface1.plot2DZones()
 
 
-surface1.plot2DZones()
-
-
-#surface3 = IXUSField('EnvironmentalSlice2.csv',900)
-#surface3.plot2DZones()
+surface3 = IXUSField('EnvironmentalSlice2.csv',900)
+surface3.plot2DZones()
 
 #surface1.plot2DZones()
 

@@ -86,6 +86,7 @@ class Field:
         if show:
             plt.show()
 
+
     def plot2D(self,field='S(E)',color = 'Reds'):
         fig, ax = plt.subplots(1)
         ax1 =ax.scatter(x =self.df[self.axis[0]],y= self.df[self.axis[1]],c =self.df[field],cmap = color)
@@ -93,4 +94,32 @@ class Field:
         ax.set_xlabel(self.axis[0])
         ax.set_ylabel(self.axis[1])
         ax.set_title("{} over {}{} plane".format(field,self.axis[0],self.axis[1]))
+
+    def compareZones(self,field,Ncolor = 'blue',GPcolor = 'yellow',Ocolor = 'red',xfig = 6,yfig = 4,axis1 = 'X',axis2 = 'Y',show = True):
+        colors = {'None':Ncolor,'General Public':GPcolor,'Occupational':Ocolor}
+        #plt.scatter(x=self.df[X], y=self.df[Y],c= self.df['Restriction'].map(colors))
+
+        groups1 = self.df.groupby('Restriction')
+        groups2 = field.df.groupby('Restriction')
+
+       
+        fig, (ax1,ax2) = plt.subplots(2,1)
+        for label, group in groups1:
+            ax1.scatter(group[axis1], group[axis2], 
+                    c=group['Restriction'].map(colors), label=label)
+
+        ax1.set(xlabel= axis1, ylabel=axis2)
+        ax1.set_title("Restricions with %d signal" % self.f)
+        ax1.legend(title='Restriction levels')
+
+        for label, group in groups2:
+            ax2.scatter(group[field.axis1], group[field.axis2], 
+                    c=group['Restriction'].map(colors), label=label)
+
+        ax2.set(xlabel= axis1, ylabel=axis2)
+        ax2.set_title("Restricions with %d signal" % self.f)
+        ax2.legend(title='Restriction levels')
+
+        if show:
+            plt.show()
 

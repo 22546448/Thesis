@@ -26,9 +26,10 @@ class IXUSField(Field):
             super().__init__(df,f,type = 'IXUS')
         else:
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
+        self.axis1  = 'X'
+        self.axis2 = 'Y'
 
-
-    def plot2DZones(self, Ncolor='blue', GPcolor='yellow', Ocolor='red', xfig=6, yfig=4, axis1='X', axis2='Y',show = True):
+    def plot2DZones(self, Ncolor='blue', GPcolor='yellow', Ocolor='red', xfig=6, yfig=4, axis1='Y', axis2='X',show = True):
         return super().plot2DZones(Ncolor, GPcolor, Ocolor, xfig, yfig, axis1, axis2,show)
 
     def plot2D(self, field='% of ICNIRP Public', color='Reds'):
