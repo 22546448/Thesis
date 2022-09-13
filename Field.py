@@ -12,7 +12,7 @@ warnings.filterwarnings('ignore', category=NaturalNameWarning)
 class Field:
     def __init__(self,df,f):
         self.df = df
-        self.f = f
+        self.f = 10
         
         self.df['Restriction'] ='Restricted Zone'
         if self.f < 0.3:
