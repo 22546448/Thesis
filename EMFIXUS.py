@@ -13,13 +13,19 @@ from Field import Field
 import warnings
 from tables import NaturalNameWarning
 warnings.filterwarnings('ignore', category=NaturalNameWarning)
-
+import errno
+import os
+import os.path
 
 
 class IXUSField(Field):
     def __init__(self,csvfile,f):
-        df = pd.read_csv('IXUS/{}'.format(csvfile))
-        super().__init__(df,f,type = 'IXUS')
+        path = 'venv/Include/IXUS/{}'.format(csvfile)
+        if os.path.exists(path):
+            df = pd.read_csv(path)
+            super().__init__(df,f,type = 'IXUS')
+        else:
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
 
     def plot2DZones(self, Ncolor='blue', GPcolor='yellow', Ocolor='red', xfig=6, yfig=4, axis1='X', axis2='Y',show = True):

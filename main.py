@@ -7,16 +7,14 @@ import numpy as np
 
 from EMFIXUS import IXUSField
 
-#surface1 = GetField("IEC-62232-panel-antenna (4)_NearField1.efe","IEC-62232-panel-antenna (4)_NearField1.hfe")
-#df['R'] = np.sqrt(df['X']**2 + df['Y']**2 + df['Z']**2)
-#df.loc[df['% of ICNIRP Public'] > 4, '% of ICNIRP Public'] = 0.1
+surface1 = GetField("IEC-62232-panel-antenna (4)_NearField1.efe","IEC-62232-panel-antenna (4)_NearField1.hfe")
 
 
+surface1.plot2DZones()
 
 
-surface3 = IXUSField('EnvironmentalSlice2-1.csv',900)
-surface3.plot2DZones()
-
+#surface3 = IXUSField('EnvironmentalSlice2.csv',900)
+#surface3.plot2DZones()
 
 #surface1.plot2DZones()
 

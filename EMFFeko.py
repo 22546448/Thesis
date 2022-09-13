@@ -59,7 +59,8 @@ def GetField(filenameE,filenameH):
     zSamples= 0
     global i
     i = 0
-
+    filenameE = 'venv/Include/CADFeko/{}'.format(filenameE)
+    filenameH = 'venv/Include/CADFeko/{}'.format(filenameH)
 
     with open(filenameE, 'r') as file:
         for line in file:
