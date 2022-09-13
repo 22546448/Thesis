@@ -47,10 +47,6 @@ class Field(Field):
         self.antenna = antenna
         self.space = space
 
-
-
-        
-
         i = 0
         xSamples = self.space.xStep
         ySamples = self.space.xStep

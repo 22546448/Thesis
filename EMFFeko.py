@@ -17,7 +17,7 @@ warnings.filterwarnings('ignore', category=NaturalNameWarning)
 
 class Fekofield(Field):
     def __init__(self,name,Fileformat,source,date,solverV,configuration,frequency,coordSystem, xSamples, ySamples, zSamples,df):
-        super().__init__(df,frequency*(10**-6))
+        super().__init__(df,frequency*(10**-6),type = 'Feko')
         self.name = name
         self.format = Fileformat
         self.source = source

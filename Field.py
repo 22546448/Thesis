@@ -10,31 +10,37 @@ from tables import NaturalNameWarning
 warnings.filterwarnings('ignore', category=NaturalNameWarning)
     
 class Field:
-    def __init__(self,df,f):
+    def __init__(self,df,f,type = 'Feko'):
         self.df = df
-        self.f = 10
+        self.f = f
         
-        self.df['Restriction'] ='Restricted Zone'
-        if self.f < 0.3:
-            self.df['Restriction'] ='General Public'
-        elif self.f >= 0.3 and self.f < 3:
-            self.df.loc[self.df['S(E)'] < 100,'Restriction'] = 'Occupation'
-        elif self.f >= 3 and self.f < 30:
-            self.df.loc[self.df['S(E)'] < 900/(self.f**2),'Restriction'] = 'Occupation'
-        if self.f >= 0.3 and self.f < 1.34:
-            self.df.loc[self.df['S(E)'] < 100,'Restriction'] = 'General Public'
-        elif self.f >= 1.34 and self.f < 30:
-            self.df.loc[self.df['S(E)'] < 180/(self.f**2),'Restriction'] = 'General Public'
-        if self.f >= 30 and self.f < 300:
-            self.df.loc[self.df['S(E)'] < 1,'Restriction'] = 'Occupation'
-            self.df.loc[self.df['S(E)'] < 0.2,'Restriction'] = 'General Public'
-        elif self.f >= 300 and self.f < 1500:
-            self.df.loc[self.df['S(E)'] < self.f/300,'Restriction'] = 'Occupation'
-            self.df.loc[self.df['S(E)'] < self.f/1500,'Restriction'] = 'General Public'
-        elif self.f >= 1500 and self.f < 100000:
-            self.df.loc[self.df['S(E)'] < 5,'Restriction'] = 'Occupation'
-            self.df.loc[self.df['S(E)'] < 1,'Restriction'] = 'General Public'
-
+        if type == 'Feko':
+            self.df['Restriction'] ='Occupational'
+            if self.f < 0.3:
+                self.df['Restriction'] ='None'
+            elif self.f >= 0.3 and self.f < 3:
+                self.df.loc[self.df['S(E)'] < 100,'Restriction'] = 'General Public'
+            elif self.f >= 3 and self.f < 30:
+                self.df.loc[self.df['S(E)'] < 900/(self.f**2),'Restriction'] = 'General Public'
+            if self.f >= 0.3 and self.f < 1.34:
+                self.df.loc[self.df['S(E)'] < 100,'Restriction'] = 'None'
+            elif self.f >= 1.34 and self.f < 30:
+                self.df.loc[self.df['S(E)'] < 180/(self.f**2),'Restriction'] = 'None'
+            if self.f >= 30 and self.f < 300:
+                self.df.loc[self.df['S(E)'] < 1,'Restriction'] = 'General Public'
+                self.df.loc[self.df['S(E)'] < 0.2,'Restriction'] = 'None'
+            elif self.f >= 300 and self.f < 1500:
+                self.df.loc[self.df['S(E)'] < self.f/300,'Restriction'] = 'General Public'
+                self.df.loc[self.df['S(E)'] < self.f/1500,'Restriction'] = 'None'
+            elif self.f >= 1500 and self.f < 100000:
+                self.df.loc[self.df['S(E)'] < 5,'Restriction'] = 'General Public'
+                self.df.loc[self.df['S(E)'] < 1,'Restriction'] = 'None'
+        elif type == 'IXUS':
+            df['Restriction'] = 'Occupational'
+            df.loc[df['% of ICNIRP Public'] < 0.4,'Restriction'] = 'General Public'
+            df.loc[df['% of ICNIRP Public'] < 0.08,'Restriction'] = 'None'
+        else:
+            raise TypeError("Incompatible type entered")
        
     def PowerAtPoint(data):
         S = np.zeros(len(data))
@@ -63,18 +69,18 @@ class Field:
         dfH =  dfH.astype(float)
         return dfH
 
-    def plot2DZones(self,GPcolor = 'blue',Ocolor = 'yellow',RZcolor = 'red',xfig = 6,yfig = 4,show = False):
-        colors = {'General Public':GPcolor,'Occupation':Ocolor,'Restricted Zone':RZcolor}
+    def plot2DZones(self,Ncolor = 'blue',GPcolor = 'yellow',Ocolor = 'red',xfig = 6,yfig = 4,axis1 = 'X',axis2 = 'Y',show = True):
+        colors = {'None':Ncolor,'General Public':GPcolor,'Occupational':Ocolor}
         #plt.scatter(x=self.df[X], y=self.df[Y],c= self.df['Restriction'].map(colors))
 
         groups = self.df.groupby('Restriction')
        
         fig, ax = plt.subplots(1, figsize=(xfig,yfig))
         for label, group in groups:
-            ax.scatter(group[self.axis[0]], group[self.axis[1]], 
+            ax.scatter(group[axis1], group[axis2], 
                     c=group['Restriction'].map(colors), label=label)
 
-        ax.set(xlabel= self.axis[0], ylabel=self.axis[1])
+        ax.set(xlabel= axis1, ylabel=axis2)
         ax.set_title("Restricions with %d signal" % self.f)
         ax.legend(title='Restriction levels')
         if show:
