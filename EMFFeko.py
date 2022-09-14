@@ -8,6 +8,7 @@ import pandas as pd
 from pandas import HDFStore
 import math
 from Field import Field
+import mayavi.mlab as mlab
 
 import warnings
 from tables import NaturalNameWarning
@@ -42,6 +43,27 @@ class Fekofield(Field):
                 self.axis = ['X','Z']
             elif ySamples > 1 and zSamples > 1:
                 self.axis = ['Y','Z']
+    
+    def plot2D(self, field='S(E)', color='Reds',show = True,method = 'cadfeko',multiplier=20):
+        if method == 'cadfeko':
+            fig, ax = plt.subplots(1)
+            ax1 =ax.scatter(x =self.df[self.axis[0]],y= self.df[self.axis[1]],c =self.df[field],cmap = color)
+            plt.colorbar(ax1)
+            ax.set_xlabel(self.axis[0])
+            ax.set_ylabel(self.axis[1])
+            ax.set_title("{} over {}{} plane".format(field,self.axis[0],self.axis[1]))
+            if show:
+                plt.show()
+        elif method == "mayavi":
+            #mlab.points3d(self.df['X'],self.df['Y'],multiplier*self.df[field],self.df[field],colormap = 'Reds',scale_mode='none')
+            #mlab.show()
+
+            self.df = self.df.sort_values(by=['Z','Y','X'])
+            arr = self.df[field].to_numpy()
+            arr = arr.reshape(self.xSamples,self.ySamples)
+            mlab.surf(arr,warp_scale = 'auto')
+            mlab.show()
+
 
                 
 def GetField(filenameE,filenameH):

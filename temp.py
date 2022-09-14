@@ -1,23 +1,19 @@
-import pandas as pd
+from mayavi.mlab import *
 import numpy as np
-import matplotlib.pyplot as plt
 
-# generate data
-nx,ny = (4,2)
-x = np.linspace(0,1,nx)
-y = np.linspace(0,1,ny)
+K = 10
+xx = np.arange(0, K, 1)
+yy = np.arange(0, K, 1)
 
+x, y = np.meshgrid(xx, yy)
+x, y = x.flatten(), y.flatten()
+z = np.zeros(K*K)
 
-xv,yv= np.meshgrid(x,y)
-print(xv,yv)
+colors = 1.0 * (x + y)/(max(x)+max(y))
 
-df = pd.DataFrame({
-       'X':xv.ravel(),
-       'Y':yv.ravel()
-})
+nodes = points3d(x, y, z, scale_factor=1)
+nodes.glyph.scale_mode = 'scale_by_vector'
 
-df['R'] = np.sqrt(df['X']**2 + df['Y']**2)
-print(df)
+nodes.mlab_source.dataset.point_data.scalars = colors
 
-plt.scatter(x=df['X'],y=df['Y'],c=df['R'],cmap='Reds')
-plt.show()
+show()
