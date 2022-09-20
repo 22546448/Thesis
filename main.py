@@ -1,15 +1,25 @@
 from EMFFeko import GetField
 import EMFIXUS
-from CreateEMF import Surface,Antenna,Field
+from Standard import getStandard
 from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
 
 from EMFIXUS import IXUSField
+import time
 
-surface1 = GetField("IEC-62232-panel-antenna (4)_NearField1.efe","IEC-62232-panel-antenna (4)_NearField1.hfe",standard='FCC')
-surface2 = GetField("IEC-62232-panel-antenna (4)_NearField1.efe","IEC-62232-panel-antenna (4)_NearField1.hfe",standard='Code6')
+  
 
-surface1.compare2D(surface2)
-plt.show()
+st = time.time()
+surface1 = GetField("IEC-62232-panel-antenna (4)_NearField1.efe","IEC-62232-panel-antenna (4)_NearField1.hfe",standard='FCC',compress=False)
+surface2 = GetField("IEC-62232-panel-antenna (4)_NearField1.efe","IEC-62232-panel-antenna (4)_NearField1.hfe",standard='Code6',compress=False)
+
+et = time.time()
+elapsed_time = et - st
+print('Execution time:', elapsed_time, 'seconds')
+
+
+surface1.compare2D(surface2,show=False)
+
+
 

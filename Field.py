@@ -6,6 +6,7 @@ from pandas import HDFStore
 import math  
 import mayavi.mlab as mlab
 from Standard import getZone
+import time
 
 
 import warnings
@@ -17,9 +18,11 @@ class Field:
         self.df = df
         self.f = f
         self.standard = standard
-        self.df.loc[getZone(f,standard)[0] > self.df['S'],'Restriction'] = 'None'
-        self.df.loc[(getZone(f,standard)[0] < self.df['S']) & (self.df['S'] < getZone(f,standard)[1]),'Restriction'] = 'General Public'
-        self.df.loc[getZone(f,standard)[1] < self.df['S'],'Restriction'] = 'Occupational'
+        maxFreq = getZone(f,standard)[1]
+        minFreq = getZone(f,standard)[0]  
+        self.df['Restriction'] = 1
+        self.df.loc[minFreq > self.df['S'],'Restriction'] = 0
+        self.df.loc[maxFreq < self.df['S'],'Restriction'] = 2
         
     
     def PowerAtPoint(data):
@@ -50,7 +53,7 @@ class Field:
         return dfH
 
     def plot2DZones(self,Ncolor = 'blue',GPcolor = 'yellow',Ocolor = 'red',xfig = 6,yfig = 4,axis1 = 'X',axis2 = 'Y',show = True):
-        colors = {'None':Ncolor,'General Public':GPcolor,'Occupational':Ocolor}
+        colors = {0:Ncolor,1:GPcolor,2:Ocolor}
         #plt.scatter(x=self.df[X], y=self.df[Y],c= self.df['Restriction'].map(colors))
 
         groups = self.df.groupby('Restriction')
@@ -76,10 +79,10 @@ class Field:
             ax.set_xlabel(self.axis[0])
             ax.set_ylabel(self.axis[1])
             ax.set_title("{} over {}{} plane".format(c,self.axis[0],self.axis[1]))
-
+    #def compareStandards()
     def compare2D(self,field,Ncolor = 'blue',GPcolor = 'yellow',Ocolor = 'red',xfig = 6,yfig = 4,axis1 = 'X',axis2 = 'Y',show = True,c='Restriction'):
         if c == 'Restriction':
-            colors = {'None':Ncolor,'General Public':GPcolor,'Occupational':Ocolor}
+            colors = {0:Ncolor,1:GPcolor,2:Ocolor}
             #plt.scatter(x=self.df[X], y=self.df[Y],c= self.df['Restriction'].map(colors))
 
             groups1 = self.df.groupby('Restriction')
