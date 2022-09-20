@@ -21,9 +21,9 @@ class Standard():
         self.occupational = None
 def getCode6s():
     data = {
-        'MaxFrequency'         :[20             ,48             ,300                   ,6000                 ,150000       ,300000],
-        'MinFrequency'         :[10             ,20             ,48                    ,300                  ,6000         ,150000],
-        'Expression'           :["2"            ,"8.944*10**3/(f**0.5)","1.291"               ,"0.02619*(f*10**-6)**0.6834" ,"10"         ,"6.67*f*(10**-5)/(10**6)"]
+        'MaxFrequency'  :[20             ,48             ,300                   ,6000                 ,150000       ,300000],
+        'MinFrequency'  :[10             ,20             ,48                    ,300                  ,6000         ,150000],
+        'Expression'    :["2"            ,"8.944e3/(f**0.5)","1.291"               ,"0.02619*(f*e-6)**0.6834" ,"10"         ,"6.67*f*(10**-5)/(10**6)"]
     }
     public = pd.DataFrame(data)
     data = {
@@ -119,6 +119,7 @@ def getZone(f,standard = 'FCC'):
         elif standard == 'ARPANSA':
             stnew = all[1]
         elif standard == 'FCC':
+            print(True)
             stnew = all[2]
         elif standard == 'BGVB11':
             stnew = all[3]

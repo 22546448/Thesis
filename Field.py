@@ -27,6 +27,7 @@ class Field:
 
         
     
+
     def PowerAtPoint(data):
         S = np.zeros(len(data))
         for j in range(len(data)):
@@ -88,7 +89,7 @@ class Field:
             colors = {0:Ncolor,1:GPcolor,2:Ocolor}
 
             if standard2 == None:
-                standard1 = self.standard
+                standard2 = self.standard
 
             maxFreq1 = getZone(self.f,standard1)[1]
             minFreq1 = getZone(self.f,standard1)[0]  
