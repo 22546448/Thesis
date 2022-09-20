@@ -119,7 +119,6 @@ def getZone(f,standard = 'FCC'):
         elif standard == 'ARPANSA':
             stnew = all[1]
         elif standard == 'FCC':
-            print(True)
             stnew = all[2]
         elif standard == 'BGVB11':
             stnew = all[3]
