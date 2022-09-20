@@ -14,9 +14,16 @@ from tables import NaturalNameWarning
 warnings.filterwarnings('ignore', category=NaturalNameWarning)
     
 class Field:
-    def __init__(self,df,f,type = 'Feko'):
+    def __init__(self,df,f,type = 'Feko',standard = 'FCC'):
+        self.standard = standard
         self.df = df
         self.f = f
+
+        maxFreq = getZone(self.f,standard)[1]
+        minFreq = getZone(self.f,standard)[0]  
+        self.df['Restriction'] = 1
+        self.df.loc[minFreq > self.df['S'],'Restriction'] = 0
+        self.df.loc[maxFreq < self.df['S'],'Restriction'] = 2
 
         
     
@@ -76,53 +83,57 @@ class Field:
             ax.set_title("{} over {}{} plane".format(c,self.axis[0],self.axis[1]))
 
 
-    def compareStandards(self,standard1,standard2,Ncolor = 'blue',GPcolor = 'yellow',Ocolor = 'red',xfig = 6,yfig = 4,axis1 = 'X',axis2 = 'Y',show = True,c='Restriction'):
-        colors = {0:Ncolor,1:GPcolor,2:Ocolor}
-        #plt.scatter(x=self.df[X], y=self.df[Y],c= self.df['Restriction'].map(colors))
-        maxFreq1 = getZone(self.f,standard1)[1]
-        minFreq1 = getZone(self.f,standard1)[0]  
-        self.df['Restriction1'] = 1
-        self.df.loc[minFreq1 > self.df['S'],'Restriction1'] = 0
-        self.df.loc[maxFreq1 < self.df['S'],'Restriction1'] = 2
+    def compareToSelf(self,standard1,S2 = 'S',S1 = 'S',standard2 = None,Ncolor = 'blue',GPcolor = 'yellow',Ocolor = 'red',xfig = 6,yfig = 4,axis1 = 'X',axis2 = 'Y',show = True,c='Restriction'):
+        if c == 'Restriction':
+            colors = {0:Ncolor,1:GPcolor,2:Ocolor}
 
-        maxFreq2 = getZone(self.f,standard2)[1]
-        minFreq2 = getZone(self.f,standard2)[0]  
-        self.df['Restriction2'] = 1
-        self.df.loc[minFreq2 > self.df['S'],'Restriction2'] = 0
-        self.df.loc[maxFreq2 < self.df['S'],'Restriction2'] = 2
+            if standard2 == None:
+                standard1 = self.standard
+
+            maxFreq1 = getZone(self.f,standard1)[1]
+            minFreq1 = getZone(self.f,standard1)[0]  
+            self.df['Restriction1'] = 1
+            self.df.loc[minFreq1 > self.df[S1],'Restriction1'] = 0
+            self.df.loc[maxFreq1 < self.df[S1],'Restriction1'] = 2
 
 
-        groups1 = self.df.groupby('Restriction1')
-        groups2 = self.df.groupby('Restriction2')
+            maxFreq2 = getZone(self.f,standard2)[1]
+            minFreq2 = getZone(self.f,standard2)[0]  
+            self.df['Restriction2'] = 1
+            self.df.loc[minFreq2 > self.df[S2],'Restriction2'] = 0
+            self.df.loc[maxFreq2 < self.df[S2],'Restriction2'] = 2
 
-    
-        fig, (ax1,ax2) = plt.subplots(2,1)
-        fig.set_size_inches(14.5,10.5)
-        for label, group in groups1:
-            ax1.scatter(group[axis1], group[axis2], 
-                    c=group['Restriction1'].map(colors), label=label)
 
-        ax1.set(xlabel= axis1, ylabel=axis2)
-        ax1.set_title("{}".format(standard1))
-        ax1.legend(title='Restriction levels')
+            groups1 = self.df.groupby('Restriction1')
+            groups2 = self.df.groupby('Restriction2')
 
-        for label, group in groups2:
-            ax2.scatter(group[axis1], group[axis2], 
-                    c=group['Restriction2'].map(colors), label=label)
+        
+            fig, (ax1,ax2) = plt.subplots(2,1)
+            fig.set_size_inches(14.5,10.5)
+            for label, group in groups1:
+                ax1.scatter(group[axis1], group[axis2], 
+                        c=group['Restriction1'].map(colors), label=label)
 
-        ax2.set(xlabel= axis1, ylabel=axis2)
-        ax2.set_title("{}".format(standard2))
-        ax2.legend(title='Restriction levels')
-        self.df = self.df.drop(columns = ['Restriction1','Restriction2'])
+            for label, group in groups2:
+                ax2.scatter(group[axis1], group[axis2], 
+                        c=group['Restriction2'].map(colors), label=label)
+
+            ax1.set(xlabel= axis1, ylabel=axis2)
+            ax1.set_title("{}".format(standard1))
+            ax1.legend(title='Restriction levels')
+            ax2.set(xlabel= axis1, ylabel=axis2)
+            ax2.set_title("{}".format(standard2))
+            ax2.legend(title='Restriction levels')
+
+            self.df = self.df.drop(columns = ['Restriction1','Restriction2'])
         if show:
             plt.show()
 
 
-    def compare2D(self,field,standard,Ncolor = 'blue',GPcolor = 'yellow',Ocolor = 'red',xfig = 6,yfig = 4,axis1 = 'X',axis2 = 'Y',show = True,c='Restriction'):
+    def compareToSurface2D(self,field,Ncolor = 'blue',GPcolor = 'yellow',Ocolor = 'red',xfig = 6,yfig = 4,axis1 = 'X',axis2 = 'Y',show = True,c='Restriction'):
         if c == 'Restriction':
             colors = {0:Ncolor,1:GPcolor,2:Ocolor}
             #plt.scatter(x=self.df[X], y=self.df[Y],c= self.df['Restriction'].map(colors))
-
             groups1 = self.df.groupby('Restriction')
             groups2 = field.df.groupby('Restriction')
 

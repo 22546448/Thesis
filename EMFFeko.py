@@ -18,8 +18,8 @@ warnings.filterwarnings('ignore', category=NaturalNameWarning)
 
 
 class Fekofield(Field):
-    def __init__(self,source,frequency,coordSystem, xSamples, ySamples, zSamples,df):
-        super().__init__(df,frequency*(10**-6),type = 'Feko')
+    def __init__(self,source,frequency,coordSystem, xSamples, ySamples, zSamples,standard,df):
+        super().__init__(df,frequency*(10**-6),type = 'Feko',standard=standard)
         self.source = source
         self.frequency = frequency
         self.coordSystem= coordSystem
@@ -59,7 +59,7 @@ class Fekofield(Field):
 
 
                 
-def GetField(filenameE,filenameH,S = 'S(E)',compress = True):
+def GetField(filenameE,filenameH,S = 'S(E)',compress = True,standard = 'FCC'):
     source= ''
     frequency= 0
     coordSystem= ''
@@ -142,12 +142,34 @@ def GetField(filenameE,filenameH,S = 'S(E)',compress = True):
 
     if compress:
         df = df.drop(columns = ['Re(Ex)','Im(Ex)','Re(Ey)','Im(Ey)','Re(Ez)','Im(Ez)','Re(Hx)','Im(Hx)','Re(Hy)','Im(Hy)','Re(Hz)','Im(Hz)','|E|'])
+    
+    df['S(E)'] = (df['|E|']**2)/(377)
+    df['S(E2)'] = (df['|E|']**2)/(2*377)
+    df['S(R)'] = (df['|E|']**2)/(377)
+
+    df['Ex'] = df['Re(Ex)'] + df['Im(Ex)']*1j
+    df['Ey'] = df['Re(Ey)'] + df['Im(Ey)']*1j
+    df['Ez'] = df['Re(Ez)'] + df['Im(Ez)']*1j
+    df['Hx'] = df['Re(Hx)'] + df['Im(Hx)']*1j
+    df['Hy'] = df['Re(Hy)'] + df['Im(Hy)']*1j
+    df['Hz'] = df['Re(Hz)'] + df['Im(Hz)']*1j
+
+    df['Re(Sx)'] = np.real(df['Ey']*df['Hz'] - df['Ez']*df['Hy'])
+    df['Im(Sx)'] = np.imag(df['Ey']*df['Hz'] - df['Ez']*df['Hy'])
+
+    df['Re(Sy)'] = np.real(df['Ez']*df['Hx'] - df['Ex']*df['Hz'])
+    df['Im(Sy)'] = np.imag(df['Ez']*df['Hx'] - df['Ex']*df['Hz'])
+
+    df['Re(Sz)'] = np.real(df['Ex']*df['Hy'] - df['Ey']*df['Hx'])
+    df['Im(Sz)'] = np.imag(df['Ex']*df['Hy'] - df['Ey']*df['Hx'])
+
+    df['S(ExH)'] = np.sqrt(df['Re(Sx)']**2 + df['Im(Sx)']**2 + df['Re(Sy)']**2 + df['Im(Sy)']**2 + df['Re(Sz)']**2 + df['Im(Sz)']**2)
 
 
     #hdf = HDFStore('hdf_file.h5')
     #hdf.put('EMF', df, format='table', data_columns=True) #put data in hdf file
     #hdf.close()
-    return Fekofield(source,frequency,coordSystem, xSamples, ySamples, zSamples,df)
+    return Fekofield(source,frequency,coordSystem, xSamples, ySamples, zSamples,standard,df)
 
 
 
