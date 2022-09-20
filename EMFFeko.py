@@ -18,8 +18,8 @@ warnings.filterwarnings('ignore', category=NaturalNameWarning)
 
 
 class Fekofield(Field):
-    def __init__(self,source,frequency,coordSystem, xSamples, ySamples, zSamples,standard,df):
-        super().__init__(df,frequency*(10**-6),type = 'Feko' ,standard=standard)
+    def __init__(self,source,frequency,coordSystem, xSamples, ySamples, zSamples,df):
+        super().__init__(df,frequency*(10**-6),type = 'Feko')
         self.source = source
         self.frequency = frequency
         self.coordSystem= coordSystem
@@ -59,7 +59,7 @@ class Fekofield(Field):
 
 
                 
-def GetField(filenameE,filenameH,standard = 'FCC',S = 'S(E)',compress = True):
+def GetField(filenameE,filenameH,S = 'S(E)',compress = True):
     source= ''
     frequency= 0
     coordSystem= ''
@@ -147,7 +147,7 @@ def GetField(filenameE,filenameH,standard = 'FCC',S = 'S(E)',compress = True):
     #hdf = HDFStore('hdf_file.h5')
     #hdf.put('EMF', df, format='table', data_columns=True) #put data in hdf file
     #hdf.close()
-    return Fekofield(source,frequency,coordSystem, xSamples, ySamples, zSamples,standard,df)
+    return Fekofield(source,frequency,coordSystem, xSamples, ySamples, zSamples,df)
 
 
 
