@@ -118,7 +118,7 @@ class Field:
             plt.show()
 
 
-    def compare2D(self,field,Ncolor = 'blue',GPcolor = 'yellow',Ocolor = 'red',xfig = 6,yfig = 4,axis1 = 'X',axis2 = 'Y',show = True,c='Restriction'):
+    def compare2D(self,field,standard,Ncolor = 'blue',GPcolor = 'yellow',Ocolor = 'red',xfig = 6,yfig = 4,axis1 = 'X',axis2 = 'Y',show = True,c='Restriction'):
         if c == 'Restriction':
             colors = {0:Ncolor,1:GPcolor,2:Ocolor}
             #plt.scatter(x=self.df[X], y=self.df[Y],c= self.df['Restriction'].map(colors))
