@@ -5,7 +5,7 @@ import pandas as pd
 from pandas import HDFStore
 import math  
 import mayavi.mlab as mlab
-from Standard import Standard
+from Standard import getZone
 
 
 import warnings
@@ -16,15 +16,12 @@ class Field:
     def __init__(self,df,f,type = 'Feko',standard = 'FCC'):
         self.df = df
         self.f = f
-        self.standard = Standard(f,standard)
-        self.df['Restriction'] ='Occupational'
-
-        self.df.loc[self.standard.conditions()['General Public'].to_numpy()[0] > self.df['S'],'Restriction'] = 'None'
-        self.df.loc[(self.standard.conditions()['General Public'].to_numpy()[0] < self.df['S']) & (self.df['S'] < self.standard.conditions()['Occupational'].to_numpy()[0]),'Restriction'] = 'General Public'
-        self.df.loc[self.standard.conditions()['Occupational'].to_numpy()[0] < self.df['S'],'Restriction'] = 'Occupational'
-        #else:
-            #raise TypeError("Incompatible type entered")
-        print("help")
+        self.standard = standard
+        self.df.loc[getZone(f,standard)[0] > self.df['S'],'Restriction'] = 'None'
+        self.df.loc[(getZone(f,standard)[0] < self.df['S']) & (self.df['S'] < getZone(f,standard)[1]),'Restriction'] = 'General Public'
+        self.df.loc[getZone(f,standard)[1] < self.df['S'],'Restriction'] = 'Occupational'
+        
+    
     def PowerAtPoint(data):
         S = np.zeros(len(data))
         for j in range(len(data)):
@@ -80,7 +77,7 @@ class Field:
             ax.set_ylabel(self.axis[1])
             ax.set_title("{} over {}{} plane".format(c,self.axis[0],self.axis[1]))
 
-    def compare2D(self,field,Ncolor = 'blue',GPcolor = 'yellow',Ocolor = 'red',xfig = 6,yfig = 4,axis1 = 'X',axis2 = 'Y',show = True,c='Restricion'):
+    def compare2D(self,field,Ncolor = 'blue',GPcolor = 'yellow',Ocolor = 'red',xfig = 6,yfig = 4,axis1 = 'X',axis2 = 'Y',show = True,c='Restriction'):
         if c == 'Restriction':
             colors = {'None':Ncolor,'General Public':GPcolor,'Occupational':Ocolor}
             #plt.scatter(x=self.df[X], y=self.df[Y],c= self.df['Restriction'].map(colors))
@@ -109,11 +106,11 @@ class Field:
             fig, (ax1,ax2) = plt.subplots(2,1)
             ax1.scatter(self.df[axis1], self.df[axis2], c=self.df[c])
             ax1.set(xlabel= axis1, ylabel=axis2)
-            ax1.set_title("Restricions with %d signal" % self.f)
+            ax1.set_title("Restrictions with %d signal" % self.f)
 
             ax2.scatter(field.df[axis1], field.df[axis2], c=self.df[c])
             ax2.set(xlabel= axis1, ylabel=axis2)
-            ax2.set_title("Restricions with %d signal" % self.f)
+            ax2.set_title("Restrictions with %d signal" % self.f)
 
         if show:
             plt.show()
