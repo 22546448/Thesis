@@ -63,7 +63,7 @@ class Fekofield(Field):
 
 
                 
-def GetField(filenameE,filenameH,standard = 'FCC'):
+def GetField(filenameE,filenameH,standard = 'FCC',S = 'S(E)'):
     name = ''
     type = ''
     Fileformat= 0
@@ -140,25 +140,31 @@ def GetField(filenameE,filenameH,standard = 'FCC'):
     df['Im(Hz)'] = dataH[:,5]
     df['|E|'] = np.sqrt(df['Re(Ex)']**2  + df['Im(Ex)']**2 + df['Re(Ey)']**2  + df['Im(Ey)']**2  + df['Re(Ez)']**2 + df['Im(Ez)']**2)
     df['|H|'] = np.sqrt(df['Re(Hx)']**2  + df['Im(Hx)']**2 + df['Re(Hy)']**2  + df['Im(Hy)']**2  + df['Re(Hz)']**2 + df['Im(Hz)']**2)
-    df['S'] = (df['|E|']**2)/(377)
 
-    df['Ex'] = df['Re(Ex)'] + df['Im(Ex)']*1j
-    df['Ey'] = df['Re(Ey)'] + df['Im(Ey)']*1j
-    df['Ez'] = df['Re(Ez)'] + df['Im(Ez)']*1j
-    df['Hx'] = df['Re(Hx)'] + df['Im(Hx)']*1j
-    df['Hy'] = df['Re(Hy)'] + df['Im(Hy)']*1j
-    df['Hz'] = df['Re(Hz)'] + df['Im(Hz)']*1j
+    if S == 'S(E)':
+        df['S'] = (df['|E|']**2)/(377)
+    elif S == 'S(E2)':
+        df['S'] = (df['|E|']**2)/(2*377)
+    elif S == 'S(R)':
+        df['S'] = (df['|E|']**2)/(377)
+    elif S == 'S(ExH)':
+        df['Ex'] = df['Re(Ex)'] + df['Im(Ex)']*1j
+        df['Ey'] = df['Re(Ey)'] + df['Im(Ey)']*1j
+        df['Ez'] = df['Re(Ez)'] + df['Im(Ez)']*1j
+        df['Hx'] = df['Re(Hx)'] + df['Im(Hx)']*1j
+        df['Hy'] = df['Re(Hy)'] + df['Im(Hy)']*1j
+        df['Hz'] = df['Re(Hz)'] + df['Im(Hz)']*1j
 
-    df['Re(Sx)'] = np.real(df['Ey']*df['Hz'] - df['Ez']*df['Hy'])
-    df['Im(Sx)'] = np.imag(df['Ey']*df['Hz'] - df['Ez']*df['Hy'])
+        df['Re(Sx)'] = np.real(df['Ey']*df['Hz'] - df['Ez']*df['Hy'])
+        df['Im(Sx)'] = np.imag(df['Ey']*df['Hz'] - df['Ez']*df['Hy'])
 
-    df['Re(Sy)'] = np.real(df['Ez']*df['Hx'] - df['Ex']*df['Hz'])
-    df['Im(Sy)'] = np.imag(df['Ez']*df['Hx'] - df['Ex']*df['Hz'])
+        df['Re(Sy)'] = np.real(df['Ez']*df['Hx'] - df['Ex']*df['Hz'])
+        df['Im(Sy)'] = np.imag(df['Ez']*df['Hx'] - df['Ex']*df['Hz'])
 
-    df['Re(Sz)'] = np.real(df['Ex']*df['Hy'] - df['Ey']*df['Hx'])
-    df['Im(Sz)'] = np.imag(df['Ex']*df['Hy'] - df['Ey']*df['Hx'])
+        df['Re(Sz)'] = np.real(df['Ex']*df['Hy'] - df['Ey']*df['Hx'])
+        df['Im(Sz)'] = np.imag(df['Ex']*df['Hy'] - df['Ey']*df['Hx'])
 
-    df['|S|'] = np.sqrt(df['Re(Sx)']**2 + df['Im(Sx)']**2 + df['Re(Sy)']**2 + df['Im(Sy)']**2 + df['Re(Sz)']**2 + df['Im(Sz)']**2)
+        df['S'] = np.sqrt(df['Re(Sx)']**2 + df['Im(Sx)']**2 + df['Re(Sy)']**2 + df['Im(Sy)']**2 + df['Re(Sz)']**2 + df['Im(Sz)']**2)
 
     
 
