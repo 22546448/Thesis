@@ -24,7 +24,7 @@ class Field:
         self.df.loc[self.standard.conditions()['Occupational'].to_numpy()[0] < self.df['S'],'Restriction'] = 'Occupational'
         #else:
             #raise TypeError("Incompatible type entered")
-       print("help")
+        print("help")
     def PowerAtPoint(data):
         S = np.zeros(len(data))
         for j in range(len(data)):
