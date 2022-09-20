@@ -1,11 +1,13 @@
 import imp
 from msilib.schema import Condition
 from tokenize import String
+from turtle import pu
 import xmltodict
 import pandas as pd
 from sympy import *
 import imp
-
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning) 
 with open('defaulExposureStandardModel.xml',encoding='utf8') as fd:
     doc = xmltodict.parse(fd.read())
 
@@ -62,31 +64,29 @@ def start():
 
                 data = []
             stand.append(st)
+    stand.append(getFCCs())
+    stand.append(getCode6s())
     return stand
 
 def getStandard(standard = 'FCC'):
-    if standard == 'FCCs':
-        return getFCCs()
-        
     all = start()
     if standard == 'ICNIRP':
         return all[0]
     elif standard == 'ARPANSA':
-       return all[1]
+        return all[1]
     elif standard == 'FCC':
-        print(all[2])
         return all[2]
     elif standard == 'BGVB11':
         return all[3]
     elif standard == 'Code6':
         return all[4]
+    elif standard == 'FCCs':
+        return all[5]
+    elif standard == 'Code6s':
+        return all[6]
 
 
 def getZone(f,standard = 'FCC'):
-        if standard == 'FCCs' or standard == 'Code6s':
-            temp = Standard(f,standard)
-            return temp.conditions()
-        
         stnew = ''
         all = start()
         if standard == 'ICNIRP':
@@ -99,7 +99,12 @@ def getZone(f,standard = 'FCC'):
             stnew = all[3]
         elif standard == 'Code6':
             stnew = all[4]
+        elif standard == 'FCCs':
+            stnew = all[5]
+        elif standard == 'Code6s':
+            stnew = all[6]
 
+        print(stnew.public)
         stnew.public = stnew.public.loc[(stnew.public['MinFrequency'] <= f) & (stnew.public['MaxFrequency'] > f)]
         stnew.occupational = stnew.occupational.loc[(stnew.occupational['MinFrequency'] <= f) & (stnew.occupational['MaxFrequency'] > f)]
         public = str(stnew.public['Expression'].to_numpy()[0])
@@ -110,52 +115,53 @@ def getZone(f,standard = 'FCC'):
             gfg = sympify(public)
             public = gfg.subs(freq,f*10**6)
         else:
-            public = int(public)
+            public = float(public)
         
         if 'f' in occupational:
             freq = symbols('f')
             gfg = sympify(occupational)
             occupational = gfg.subs(freq,f*10**6)
         else:
-            occupational = int(occupational)
+            occupational = float(occupational)
 
 
         return public, occupational
 
 def getCode6s():
     data = {
-        'Upper'         :["20"             ,"48"             ,"100"            ,"300"                ,"6000"               ,"15000"      ,"150000" ,"300000"],
-        'Lower'         :["10"             ,"20"             ,"48"             ,"100"                ,"300"                ,"6000"       ,"15000"  ,"150000"],
-        'General Public':["2"              ,"8.944/(f*0.5)" ,"1.291"          ,"1.291"              ,"0.02619*(f*0.6834)","10"         ,"10"     ,6.67*(10**-5)]
+        'MaxFrequency'         :[20             ,48             ,300                   ,6000                 ,150000       ,300000],
+        'MinFrequency'         :[10             ,20             ,48                    ,300                  ,6000         ,150000],
+        'Expression'           :["2"            ,"8.944*10**3/(f**0.5)","1.291"               ,"0.02619*(f*10**-6)**0.6834" ,"10"         ,"6.67*f*(10**-5)/(10**6)"]
     }
     public = pd.DataFrame(data)
     data = {
-        'Upper'         :["20"             ,"48"             ,"100"            ,"300"                ,"6000"               ,"15000"      ,"150000" ,"300000"],
-        'Lower'         :["10"             ,"20"             ,"48"             ,"100"                ,"300"                ,"6000"       ,"15000"  ,"150000"],
-        'Occupational'  :["10"             ,"44.72/(f**0.5)" ,"6.455"          ,"0.6455*(f**0.5)"    ,"0.6455*(f**0.5)"    ,"50"         ,"50"     ,"3.33*f*(10**-4)"]
+        'MaxFrequency'  :[20             ,48             ,100            ,6000                 ,150000       ,300000],
+        'MinFrequency'  :[10             ,20             ,48             ,100                  ,6000         ,150000],
+        'Expression'    :["10"           ,"44.72/((f*10**-6)**0.5)" ,"6.455"          ,"0.6455*(f*(10**-6)**0.5)"      ,"50"           ,"3.33*(10**-4)*f*(10**-6)"]
     }
     occupational = pd.DataFrame(data)
-    return public,occupational
-    
+    temp = StandardXML('Code6s')
+    temp.public = public
+    temp.occupational = occupational
+    return temp
 
-def getCode6s(f):
+def getFCCs():
     data = {
-        'Upper'         :[20             ,48             ,100            ,300                ,6000               ,15000      ,150000 ,300000],
-        'Lower'         :[10             ,20             ,48             ,100                ,300                ,6000       ,15000  ,150000],
-        'General Public':[2              ,8.944/(f**0.5) ,1.291          ,1.291              ,0.02619*(f**0.6834),10         ,10     ,6.67*(10**-5)],
-        'Occupational'  :[10             ,44.72/(f**0.5) ,6.455          ,0.6455*(f**0.5)    ,0.6455*(f**0.5)    ,50         ,50     ,3.33*f*(10**-4)]
+        'MaxFrequency'         :[1.34        ,3                         ,30                     ,300         ,1500         ,100000],
+        'MinFrequency'         :[0.3         ,1.34                      ,3                      ,30          ,300          ,1500],
+        'Expression'           :["1000"      ,"1800/((f*10**-6)**2)"    ,"1800/((f*10**-6)**2)" ,"2"         ,"f/150e6"       ,"10"    ],
     }
-    return pd.DataFrame(data)
-
-def getFCCs(f):
+    public = pd.DataFrame(data)
     data = {
-        'Upper'         :[1.34        ,3            ,30            ,300         ,1500         ,100000],
-        'Lower'         :[0.3         ,1.34         ,3             ,30          ,300          ,1500],
-        'General Public':[1000        ,1800/(f**2)  ,1800/(f**2)   ,2           ,f/150       ,10    ],
-        'Occupational'  :[1000        ,1000         ,9000/(f**2)   ,10          ,f/30         ,50  ]
+        'MaxFrequency'         :[1.34        ,3                         ,30                     ,300         ,1500         ,100000],
+        'MinFrequency'         :[0.3         ,1.34                      ,3                      ,30          ,300          ,1500],
+        'Expression'           :["1000"        ,"1000"         ,"9000/((f*10**-6)**2)"   ,"10"          ,"f*10**-6/30"         ,"50"  ]
     }
-    return pd.DataFrame(data)
-
+    occupational = pd.DataFrame(data)
+    temp = StandardXML('FCCs')
+    temp.public = public
+    temp.occupational = occupational
+    return temp
 
 
 
