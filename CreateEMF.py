@@ -45,13 +45,14 @@ class Surface:
 class Field(Field):
     def __init__(self,antenna,space,spaceMin = 3,sMax = 10):
         space.df['R'] = np.sqrt((space.df['X']-antenna.x)**2 + (space.df['Y']-antenna.y)**2 + (space.df['Z']-antenna.z)**2)
-        space.df['S(E)'] = (antenna.P*antenna.G)/(4*np.pi*(space.df['R'])**2)
-        space.df.loc[space.df['S(E)'] > sMax ,'S(E)'] = space.df['R']
-        print(space.df.sort_values(by=['S(E)']))
+        space.df['S'] = (antenna.P*antenna.G)/(4*np.pi*(space.df['R'])**2)
+        space.df.loc[space.df['S'] > sMax ,'S'] = space.df['R']
+        print(space.df.sort_values(by=['S']))
         super().__init__(space.df,antenna.f)
         self.antenna = antenna
         self.space = space
         self.df = space.df
+        
         i = 0
         xSamples = self.space.xStep
         ySamples = self.space.xStep
@@ -67,9 +68,9 @@ class Field(Field):
             #elif xSamples > 1 and zSamples > 1:
             #    self.axis = ['X','Z']
             #elif ySamples > 1 and zSamples > 1:
-            #    self.axis = ['Y','Z']
+            #   self.axis = ['Y','Z']
         
-    def plot2D(self, field='S(E)', color='Reds', method='mayavi',show = True):
+    def plot2D(self, field='S', color='Reds', method='mayavi',show = True):
             if method == 'cadfeko':
                 fig, ax = plt.subplots(1)
                 ax1 =ax.scatter(x =self.df[self.axis[0]],y= self.df[self.axis[1]],c =self.df[field],cmap = color)

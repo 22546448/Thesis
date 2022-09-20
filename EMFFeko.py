@@ -17,8 +17,8 @@ warnings.filterwarnings('ignore', category=NaturalNameWarning)
 
 
 class Fekofield(Field):
-    def __init__(self,name,Fileformat,source,date,solverV,configuration,frequency,coordSystem, xSamples, ySamples, zSamples,df):
-        super().__init__(df,frequency*(10**-6),type = 'Feko')
+    def __init__(self,name,Fileformat,source,date,solverV,configuration,frequency,coordSystem, xSamples, ySamples, zSamples,standard,df):
+        super().__init__(df,frequency*(10**-6),standard=standard)
         self.name = name
         self.format = Fileformat
         self.source = source
@@ -44,29 +44,26 @@ class Fekofield(Field):
             elif ySamples > 1 and zSamples > 1:
                 self.axis = ['Y','Z']
     
-    def plot2D(self, field='S(E)', color='Reds',show = True,method = 'cadfeko',multiplier=20):
-        if method == 'cadfeko':
+    def plot2D(self, c='S', color='Reds',show = True,method = 'matplotlib'):
+        if method == 'matplotlib':
             fig, ax = plt.subplots(1)
-            ax1 =ax.scatter(x =self.df[self.axis[0]],y= self.df[self.axis[1]],c =self.df[field],cmap = color)
+            ax1 =ax.scatter(x =self.df[self.axis[0]],y= self.df[self.axis[1]],c =self.df[c],cmap = color)
             plt.colorbar(ax1)
             ax.set_xlabel(self.axis[0])
             ax.set_ylabel(self.axis[1])
-            ax.set_title("{} over {}{} plane".format(field,self.axis[0],self.axis[1]))
+            ax.set_title("{} over {}{} plane".format(c,self.axis[0],self.axis[1]))
             if show:
                 plt.show()
         elif method == "mayavi":
-            #mlab.points3d(self.df['X'],self.df['Y'],multiplier*self.df[field],self.df[field],colormap = 'Reds',scale_mode='none')
-            #mlab.show()
-
             self.df = self.df.sort_values(by=['Z','Y','X'])
-            arr = self.df[field].to_numpy()
+            arr = self.df[c].to_numpy()
             arr = arr.reshape(self.xSamples,self.ySamples)
             mlab.surf(arr,warp_scale = 'auto')
             mlab.show()
 
 
                 
-def GetField(filenameE,filenameH):
+def GetField(filenameE,filenameH,standard = 'FCC'):
     name = ''
     type = ''
     Fileformat= 0
@@ -143,17 +140,35 @@ def GetField(filenameE,filenameH):
     df['Im(Hz)'] = dataH[:,5]
     df['|E|'] = np.sqrt(df['Re(Ex)']**2  + df['Im(Ex)']**2 + df['Re(Ey)']**2  + df['Im(Ey)']**2  + df['Re(Ez)']**2 + df['Im(Ez)']**2)
     df['|H|'] = np.sqrt(df['Re(Hx)']**2  + df['Im(Hx)']**2 + df['Re(Hy)']**2  + df['Im(Hy)']**2  + df['Re(Hz)']**2 + df['Im(Hz)']**2)
-    df['S(E)'] = (df['|E|']**2)/(3770)
+    df['S'] = (df['|E|']**2)/(377)
 
+    df['Ex'] = df['Re(Ex)'] + df['Im(Ex)']*1j
+    df['Ey'] = df['Re(Ey)'] + df['Im(Ey)']*1j
+    df['Ez'] = df['Re(Ez)'] + df['Im(Ez)']*1j
+    df['Hx'] = df['Re(Hx)'] + df['Im(Hx)']*1j
+    df['Hy'] = df['Re(Hy)'] + df['Im(Hy)']*1j
+    df['Hz'] = df['Re(Hz)'] + df['Im(Hz)']*1j
+
+    df['Re(Sx)'] = np.real(df['Ey']*df['Hz'] - df['Ez']*df['Hy'])
+    df['Im(Sx)'] = np.imag(df['Ey']*df['Hz'] - df['Ez']*df['Hy'])
+
+    df['Re(Sy)'] = np.real(df['Ez']*df['Hx'] - df['Ex']*df['Hz'])
+    df['Im(Sy)'] = np.imag(df['Ez']*df['Hx'] - df['Ex']*df['Hz'])
+
+    df['Re(Sz)'] = np.real(df['Ex']*df['Hy'] - df['Ey']*df['Hx'])
+    df['Im(Sz)'] = np.imag(df['Ex']*df['Hy'] - df['Ey']*df['Hx'])
+
+    df['|S|'] = np.sqrt(df['Re(Sx)']**2 + df['Im(Sx)']**2 + df['Re(Sy)']**2 + df['Im(Sy)']**2 + df['Re(Sz)']**2 + df['Im(Sz)']**2)
 
     
 
     #hdf = HDFStore('hdf_file.h5')
     #hdf.put('EMF', df, format='table', data_columns=True) #put data in hdf file
     #hdf.close()
-    return Fekofield(name,Fileformat,source,date,solverV,configuration,frequency,coordSystem, xSamples, ySamples, zSamples,df)
+    return Fekofield(name,Fileformat,source,date,solverV,configuration,frequency,coordSystem, xSamples, ySamples, zSamples,standard,df)
 
 
 
 #def CreateField(antenna,source='IEC-62232-panel-antenna',date=0,configuration='Created',frequency = f)
 #   return fieldSolved(name,Fileformat,source,date,solverV,configuration,frequency,coordSystem, xSamples, ySamples, zSamples,df)
+
