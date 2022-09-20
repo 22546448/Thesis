@@ -12,7 +12,7 @@ surface2 = GetField("IEC-62232-panel-antenna (4)_NearField1.efe","IEC-62232-pane
 
 surface2.plot2DZones()
 plt.show()
-
+print('helo')
 
 #plt.scatter(x = surface1.df['X'],y = surface1.df['Y'],c = np.positive(surface1.df['|S|']-surface1.df['S']),cmap='Reds')
 #surface1.df.to_csv('surface1.csv',sep=';')
