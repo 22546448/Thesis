@@ -13,21 +13,8 @@ with open('defaulExposureStandardModel.xml',encoding='utf8') as fd:
 
 
 
-class Standard():
-    def __init__(self,f,standard = 'FCCs'):
-        self.standard = standard
-        self.f = f
-        self.df = None
-    
-    def conditions(self):
-        if self.standard == 'FCCs':
-            self.df = getFCCs(self.f)
-        elif self.standard == 'Code6s':
-            self.df = getCode6s(self.f)
-        temp = self.df.loc[(self.df['Lower'] <= self.f) & (self.df['Upper'] > self.f)]
-        return temp[['General Public','Occupational']].to_numpy()[0][0],temp[['General Public','Occupational']].to_numpy()[0][1]
 
-class StandardXML():
+class Standard():
     def __init__(self,standard):
         self.standard = standard
         self.public = None
@@ -37,7 +24,7 @@ class StandardXML():
 def start():
     stand = []
     for standard in doc['ExposureStandardModel']['ExposureStandard']:
-        st = StandardXML(standard = standard['Label'])
+        st = Standard(standard = standard['Label'])
         if st.standard != "Serbian":
             data = []
             for refL in standard['ReferenceLevel']:
@@ -140,7 +127,7 @@ def getCode6s():
         'Expression'    :["10"           ,"44.72/((f*10**-6)**0.5)" ,"6.455"          ,"0.6455*(f*(10**-6)**0.5)"      ,"50"           ,"3.33*(10**-4)*f*(10**-6)"]
     }
     occupational = pd.DataFrame(data)
-    temp = StandardXML('Code6s')
+    temp = Standard('Code6s')
     temp.public = public
     temp.occupational = occupational
     return temp
@@ -158,7 +145,7 @@ def getFCCs():
         'Expression'           :["1000"        ,"1000"         ,"9000/((f*10**-6)**2)"   ,"10"          ,"f*10**-6/30"         ,"50"  ]
     }
     occupational = pd.DataFrame(data)
-    temp = StandardXML('FCCs')
+    temp = Standard('FCCs')
     temp.public = public
     temp.occupational = occupational
     return temp
