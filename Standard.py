@@ -159,6 +159,3 @@ def getFCCs(f):
 
 
 
-x = getZone(900,'FCC')
-print(x)
-
