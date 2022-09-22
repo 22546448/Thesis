@@ -8,11 +8,10 @@ import time
 
 
 
-#surface1 = GetField("IEC-62232-panel-antenna (4)_NearField1.efe","IEC-62232-panel-antenna (4)_NearField1.hfe",compress=False,standard = 'FCC')
+surface1 = GetField("IEC-62232-panel-antenna (4)_NearField1.efe","IEC-62232-panel-antenna (4)_NearField1.hfe",compress=False,standard = 'FCC',S = 'S(E)')
+surface2 = GetField("IEC-62232-panel-antenna (4)_NearField1.efe","IEC-62232-panel-antenna (4)_NearField1.hfe",compress=False,standard = 'FCC',S = 'S(ExH)')
 
+surface1.compareToSurface2D(surface2)
 #IXUSSurface = IXUSField("EnvironmentalSlice2-2.csv",900)
 #IXUSSurface.compareToSelf('ARPANSA')
 
-FCC = getStandard()
-print(FCC.standard)
-print(FCC.public)

@@ -122,6 +122,7 @@ def GetField(filenameE,filenameH,S = 'S(E)',compress = True,standard = 'FCC'):
     elif S == 'S(R)':
         df['S'] = (df['|E|']**2)/(377)
     elif S == 'S(ExH)':
+        print('here')
         df['Ex'] = df['Re(Ex)'] + df['Im(Ex)']*1j
         df['Ey'] = df['Re(Ey)'] + df['Im(Ey)']*1j
         df['Ez'] = df['Re(Ez)'] + df['Im(Ez)']*1j
