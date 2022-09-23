@@ -132,7 +132,7 @@ def GetField(filenameE,filenameH,S = 'S(E)',compress = True,standard = 'FCC'):
 
     #P = 
 
-    df['Sx'] = df['Ey']*df['Hz'] - df['Ez']*df['Hy']
+    df['Sx'] =    df['Ey']*df['Hz'] - df['Ez']*df['Hy']
     df['Sy'] = df['Ez']*df['Hx'] - df['Ex']*df['Hz']
     df['Sz'] = df['Ex']*df['Hy'] - df['Ey']*df['Hx']
     df['S(ExH)'] = np.sqrt(np.absolute(df['Sx'])**2 + np.absolute(df['Sy'])**2 + np.absolute(df['Sz'])**2)
