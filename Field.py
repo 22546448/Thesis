@@ -14,16 +14,17 @@ from tables import NaturalNameWarning
 warnings.filterwarnings('ignore', category=NaturalNameWarning)
     
 class Field:
-    def __init__(self,df,f,type = 'Feko',standard = 'FCC'):
+    def __init__(self,df,f,type = 'Feko',standard = 'FCC',restriction = True):
         self.standard = standard
         self.df = df
         self.f = f
 
-        maxFreq = getZone(self.f,standard)[1]
-        minFreq = getZone(self.f,standard)[0]  
-        self.df['Restriction'] = 1
-        self.df.loc[minFreq > self.df['S'],'Restriction'] = 0
-        self.df.loc[maxFreq < self.df['S'],'Restriction'] = 2
+        if restriction:
+            maxFreq = getZone(self.f,standard)[1]
+            minFreq = getZone(self.f,standard)[0]  
+            self.df['Restriction'] = 1
+            self.df.loc[minFreq > self.df['S'],'Restriction'] = 0
+            self.df.loc[maxFreq < self.df['S'],'Restriction'] = 2
 
         
     

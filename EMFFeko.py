@@ -19,7 +19,7 @@ warnings.filterwarnings('ignore', category=NaturalNameWarning)
 
 class Fekofield(Field):
     def __init__(self,source,frequency,coordSystem, xSamples, ySamples, zSamples,standard,df):
-        super().__init__(df,frequency*(10**-6),type = 'Feko',standard=standard)
+        super().__init__(df,frequency*(10**-6),type = 'Feko',standard=standard, restriction = False)
         self.source = source
         self.frequency = frequency
         self.coordSystem= coordSystem
@@ -112,60 +112,40 @@ def GetField(filenameE,filenameH,S = 'S(E)',compress = True,standard = 'FCC'):
     df['Im(Hy)'] = dataH[:,3]
     df['Re(Hz)'] = dataH[:,4]
     df['Im(Hz)'] = dataH[:,5]
-    df['|E|'] = np.sqrt(df['Re(Ex)']**2  + df['Im(Ex)']**2 + df['Re(Ey)']**2  + df['Im(Ey)']**2  + df['Re(Ez)']**2 + df['Im(Ez)']**2)
+
+    df['Ex'] = (df['Re(Ex)'] + df['Im(Ex)']*1j)/np.sqrt(2)
+    df['Ey'] = (df['Re(Ey)'] + df['Im(Ey)']*1j)/np.sqrt(2)
+    df['Ez'] = (df['Re(Ez)'] + df['Im(Ez)']*1j)/np.sqrt(2)
+    df['Hx'] = (df['Re(Hx)'] + df['Im(Hx)']*1j)/np.sqrt(2)
+    df['Hy'] = (df['Re(Hy)'] + df['Im(Hy)']*1j)/np.sqrt(2)
+    df['Hz'] = (df['Re(Hz)'] + df['Im(Hz)']*1j)/np.sqrt(2)
+    
+    #df['|E|'] = np.absolute(df['Ez'])
+    df['|E|'] = np.sqrt(np.absolute(df['Ex'])**2+ np.absolute(df['Ey'])**2 + np.absolute(df['Ez'])**2)
+    
+
     #df['|H|'] = np.sqrt(df['Re(Hx)']**2  + df['Im(Hx)']**2 + df['Re(Hy)']**2  + df['Im(Hy)']**2  + df['Re(Hz)']**2 + df['Im(Hz)']**2)
 
-    if S == 'S(E)':
-        df['S'] = (df['|E|']**2)/(377)
-    elif S == 'S(E2)':
-        df['S'] = (df['|E|']**2)/(2*377)
-    elif S == 'S(R)':
-        df['S'] = (df['|E|']**2)/(377)
-    elif S == 'S(ExH)':
-        print('here')
-        df['Ex'] = df['Re(Ex)'] + df['Im(Ex)']*1j
-        df['Ey'] = df['Re(Ey)'] + df['Im(Ey)']*1j
-        df['Ez'] = df['Re(Ez)'] + df['Im(Ez)']*1j
-        df['Hx'] = df['Re(Hx)'] + df['Im(Hx)']*1j
-        df['Hy'] = df['Re(Hy)'] + df['Im(Hy)']*1j
-        df['Hz'] = df['Re(Hz)'] + df['Im(Hz)']*1j
+    df['S(E)'] = df['|E|']**2/(377)
+    #df['S(E2)'] = (df['|E|']**2)/(2*377)
+    #df['S(R)'] = (df['|E|']**2)/(377)
 
-        df['Re(Sx)'] = np.real(df['Ey']*df['Hz'] - df['Ez']*df['Hy'])
-        df['Im(Sx)'] = np.imag(df['Ey']*df['Hz'] - df['Ez']*df['Hy'])
+    #P = 
 
-        df['Re(Sy)'] = np.real(df['Ez']*df['Hx'] - df['Ex']*df['Hz'])
-        df['Im(Sy)'] = np.imag(df['Ez']*df['Hx'] - df['Ex']*df['Hz'])
+    df['Sx'] = df['Ey']*df['Hz'] - df['Ez']*df['Hy']
+    df['Sy'] = df['Ez']*df['Hx'] - df['Ex']*df['Hz']
+    df['Sz'] = df['Ex']*df['Hy'] - df['Ey']*df['Hx']
+    df['S(ExH)'] = np.sqrt(np.absolute(df['Sx'])**2 + np.absolute(df['Sy'])**2 + np.absolute(df['Sz'])**2)
 
-        df['Re(Sz)'] = np.real(df['Ex']*df['Hy'] - df['Ey']*df['Hx'])
-        df['Im(Sz)'] = np.imag(df['Ex']*df['Hy'] - df['Ey']*df['Hx'])
 
-        df['S'] = np.sqrt(df['Re(Sx)']**2 + df['Im(Sx)']**2 + df['Re(Sy)']**2 + df['Im(Sy)']**2 + df['Re(Sz)']**2 + df['Im(Sz)']**2)
-
+    df['Sx*'] = np.real(df['Ey']*np.conj(df['Hz']) - df['Ez']*np.conj(df['Hy']))
+    df['Sy*'] = np.real(df['Ez']*np.conj(df['Hx']) - df['Ex']*np.conj(df['Hz']))
+    df['Sz*'] = np.real(df['Ex']*np.conj(df['Hy']) - df['Ey']*np.conj(df['Hx']))
+    df['S(ExH*)'] = np.sqrt(df['Sx*']**2 + df['Sy*']**2 + df['Sz*']**2)/2
+    df['S'] = df['S(ExH)']
     if compress:
-        df = df.drop(columns = ['Re(Ex)','Im(Ex)','Re(Ey)','Im(Ey)','Re(Ez)','Im(Ez)','Re(Hx)','Im(Hx)','Re(Hy)','Im(Hy)','Re(Hz)','Im(Hz)','|E|'])
+        df = df.drop(columns = ['Re(Ex)','Im(Ex)','Re(Ey)','Im(Ey)','Re(Ez)','Im(Ez)','Re(Hx)','Im(Hx)','Re(Hy)','Im(Hy)','Re(Hz)','Im(Hz)','Re(Sx)','Im(Sx)','Re(Sy)','Im(Sy)','Re(Sz)','Im(Sz)','Ex','Ey','Ez','Hx','Hy','Hz','|E|'])
     
-    df['S(E)'] = (df['|E|']**2)/(377)
-    df['S(E2)'] = (df['|E|']**2)/(2*377)
-    df['S(R)'] = (df['|E|']**2)/(377)
-
-    df['Ex'] = df['Re(Ex)'] + df['Im(Ex)']*1j
-    df['Ey'] = df['Re(Ey)'] + df['Im(Ey)']*1j
-    df['Ez'] = df['Re(Ez)'] + df['Im(Ez)']*1j
-    df['Hx'] = df['Re(Hx)'] + df['Im(Hx)']*1j
-    df['Hy'] = df['Re(Hy)'] + df['Im(Hy)']*1j
-    df['Hz'] = df['Re(Hz)'] + df['Im(Hz)']*1j
-
-    df['Re(Sx)'] = np.real(df['Ey']*df['Hz'] - df['Ez']*df['Hy'])
-    df['Im(Sx)'] = np.imag(df['Ey']*df['Hz'] - df['Ez']*df['Hy'])
-
-    df['Re(Sy)'] = np.real(df['Ez']*df['Hx'] - df['Ex']*df['Hz'])
-    df['Im(Sy)'] = np.imag(df['Ez']*df['Hx'] - df['Ex']*df['Hz'])
-
-    df['Re(Sz)'] = np.real(df['Ex']*df['Hy'] - df['Ey']*df['Hx'])
-    df['Im(Sz)'] = np.imag(df['Ex']*df['Hy'] - df['Ey']*df['Hx'])
-
-    df['S(ExH)'] = np.sqrt(df['Re(Sx)']**2 + df['Im(Sx)']**2 + df['Re(Sy)']**2 + df['Im(Sy)']**2 + df['Re(Sz)']**2 + df['Im(Sz)']**2)
-
 
     #hdf = HDFStore('hdf_file.h5')
     #hdf.put('EMF', df, format='table', data_columns=True) #put data in hdf file
