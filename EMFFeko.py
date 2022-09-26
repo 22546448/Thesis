@@ -119,6 +119,8 @@ def GetField(filenameE,filenameH,S = 'S(E)',compress = True,standard = 'FCC'):
     df['Hx'] = (df['Re(Hx)'] + df['Im(Hx)']*1j)/np.sqrt(2)
     df['Hy'] = (df['Re(Hy)'] + df['Im(Hy)']*1j)/np.sqrt(2)
     df['Hz'] = (df['Re(Hz)'] + df['Im(Hz)']*1j)/np.sqrt(2)
+
+ 
     
     #df['|E|'] = np.absolute(df['Ez'])
     df['|E|'] = np.sqrt(np.absolute(df['Ex'])**2+ np.absolute(df['Ey'])**2 + np.absolute(df['Ez'])**2)
@@ -132,7 +134,7 @@ def GetField(filenameE,filenameH,S = 'S(E)',compress = True,standard = 'FCC'):
 
     #P = 
 
-    df['Sx'] =    df['Ey']*df['Hz'] - df['Ez']*df['Hy']
+    df['Sx'] = df['Ey']*df['Hz'] - df['Ez']*df['Hy']
     df['Sy'] = df['Ez']*df['Hx'] - df['Ex']*df['Hz']
     df['Sz'] = df['Ex']*df['Hy'] - df['Ey']*df['Hx']
     df['S(ExH)'] = np.sqrt(np.absolute(df['Sx'])**2 + np.absolute(df['Sy'])**2 + np.absolute(df['Sz'])**2)
