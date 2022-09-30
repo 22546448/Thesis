@@ -205,8 +205,9 @@ def SpacialPeakCylindricalEstimation(phi,R,P = 80,AHPBW = 85,L = 2.25,G= 17,y = 
     ry = R/np.cos(y)
     return 2*P*2**(-4*(phi/AHPBW)**2)/(AHPBW*ry*L*np.cos(y)**2*np.sqrt(1 + (2*ry/ro)**2))
 
-def AdjustedSphericalSector(theta,phi,R,power = 80, VHPBW = 8.5, AHPBW = 85, L = 2.25, G = 17,Globe = 3.6, y = 0):
+def AdjustedSphericalSector(theta,phi,R,power = 80, VHPBW = 8.5, AHPBW = 85, L = 2.25, G = 17,Globe = -3.6, y = 0):
     G = 10**(G/10)
+    Globe = 10**(Globe/10)
     VHPBW *= np.pi/180
     AHPBW *= np.pi/180
     b1 = (theta - y - np.pi/2)/VHPBW

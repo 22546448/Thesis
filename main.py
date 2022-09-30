@@ -19,7 +19,7 @@ def CylindricalValidationTest():
     power = 80
     L = 2.158
     AHPBW = 84
-    y = 0
+    y = 5
     Gs = 17 #dBi
     Go = 11 #dBi
     Globe = -9      #dBi
@@ -40,18 +40,35 @@ def CylindricalValidationTest():
     plt.show()
 
 
+def SphericalValidationTest():
+    adjustedSectorS = [52, 353, 313, 210, 141, 98.6, 72, 54.5 ]
+    adjustedSectorS = [a/1000 for a in adjustedSectorS]
+    SectorCoverageS = [9.96, 5.74, 3.70, 2.56, 1.86, 1.25, 0.727]
+    f = 925
+    lamda = (3*10**8)/(f*10**6)
+    power = 80
+    L = 2.158
+    Gs = 17 #dBi
+    Go = 11 #dBi
+    Globes = -3.6     #dBi
+    Globe0 = -9   #dBi
+    phi = np.pi/12
+    Ry = np.linspace(10,80,8)
+    R = [np.sqrt(ry**2 + 5**2) for ry in Ry]
+    R = np.array(R)
+    theta = [np.pi/2 + np.arctan(5/ry) for ry in Ry]
+    theta = np.array(theta)
+    Ry = np.array(Ry)
 
+    adjustedSpherical = AdjustedSphericalSector(theta = theta, phi=phi, R = Ry,power = power, VHPBW=8, AHPBW=84, L = L, G=Gs, Globe=Globes, y =5*np.pi/180 )
+    print(adjustedSpherical)
+    plt.figure()
+    plt.plot(Ry,adjustedSpherical,label = 'SpacialPeakCylindrical')
+    plt.plot(Ry,adjustedSectorS,label = 'Adjusted Spherical Validation line')
+    #plt.plot(Ry,SectorCoverageSbar,label = 'Average Cylindrical Validation line')
+    #plt.plot(Ry,SectorPeak,label = 'SpacialAverageCylindrical')
+    plt.legend()
+    plt.show()
 
-
-
-
-
-
-
-
-
-
-
-
-CylindricalValidationTest()
+SphericalValidationTest()
 
