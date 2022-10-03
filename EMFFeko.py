@@ -1,4 +1,4 @@
-from cmath import sin
+from cmath import cos, sin
 from fileinput import filename
 from platform import freedesktop_os_release
 from unittest import result
@@ -11,6 +11,8 @@ import math
 from Field import Field
 import mayavi.mlab as mlab
 import time
+from numpy import *
+
 
 import warnings
 from tables import NaturalNameWarning
@@ -97,7 +99,19 @@ def GetFarField(filename,compress = True,standard = 'FCC',power = 80):
     df['S(E)'] = df['|E|']**2/(337*2)
     return df
 
-def GetField(filenameE,filenameH,S = 'S(E)',compress = True,standard = 'FCC',power = 80):
+def plotFarField(df):
+    phi, theta  = mgrid[0:361:1,0:181:1]
+    Gnum = 10**(df['Directivity(Total)'].to_numpy()/10)
+    lamda = 1/3
+    f = Gnum
+    f = np.reshape(f,(361,181))
+    x = f*np.sin(theta*np.pi/180)*np.cos(phi*np.pi/180)
+    y = f*np.sin(theta*np.pi/180)*np.sin(phi*np.pi/180)
+    z = f*np.cos(theta*np.pi/180)
+    mlab.mesh(x, y, z)
+    mlab.show()
+
+def GetField(filenameE,filenameH,S = 'S(E)',compress = False,standard = 'FCC',power = 80):
     source= ''
     frequency= 900
     coordSystem= ''
@@ -162,46 +176,45 @@ def GetField(filenameE,filenameH,S = 'S(E)',compress = True,standard = 'FCC',pow
     df['Hz'] = (df['Re(Hz)'] + df['Im(Hz)']*1j)/np.sqrt(2)
 
     df['|E|'] = np.sqrt(np.absolute(df['Ex'])**2+ np.absolute(df['Ey'])**2 + np.absolute(df['Ez'])**2)
-    df['S(E)'] = df['|E|']**2/(377)
-    #df['Snear'] = SpacialPeakCylindricalEstimation(df['phi'], df['R'])
-    df['Sfar'] = AdjustedSphericalSector(theta=df['theta'] , phi=df['phi'] , R=df['R'])
-    df['Snear'] = SpacialPeakCylindricalEstimation(df['phi'],df['R'])
-    df['SfarSimple'] = SimpleSphericalSector(theta=df['theta'] , phi=df['phi'] , R=df['R'])
-
-
     df['Sx'] = df['Ey']*df['Hz'] - df['Ez']*df['Hy']
     df['Sy'] = df['Ez']*df['Hx'] - df['Ex']*df['Hz']
     df['Sz'] = df['Ex']*df['Hy'] - df['Ey']*df['Hx']
-    df['S(ExH)'] = np.sqrt(np.absolute(df['Sx'])**2 + np.absolute(df['Sy'])**2 + np.absolute(df['Sz'])**2)
 
+    df['Full wave'] = np.sqrt(np.absolute(df['Sx'])**2 + np.absolute(df['Sy'])**2 + np.absolute(df['Sz'])**2)
+    df['Classical'] = Classical(df['|E|'].to_numpy())
+    df['OET652'] = OET65mesh1(df['R'])
+    df['OET651'] = OET65mesh2(df['R'])
+    df['ICNIRP Peak'] = ICNIRPmeshPeak(df['R'], df['phi'], df['theta'])
+    df['ICNIRP Average'] = ICNIRPmeshAverage(df['R'], df['phi'], df['theta'])
 
-    #df['Sx*'] = np.real(df['Ey']*np.conj(df['Hz']) - df['Ez']*np.conj(df['Hy']))
-    #df['Sy*'] = np.real(df['Ez']*np.conj(df['Hx']) - df['Ex']*np.conj(df['Hz']))
-    #df['Sz*'] = np.real(df['Ex']*np.conj(df['Hy']) - df['Ey']*np.conj(df['Hx']))
-    #df['S(ExH*)'] = np.sqrt(df['Sx*']**2 + df['Sy*']**2 + df['Sz*']**2)/2
-
-    df['S'] = df['S(ExH)']
+    df['S'] = df['Full wave']
     if compress:
         df = df.drop(columns = ['Re(Ex)','Im(Ex)','Re(Ey)','Im(Ey)','Re(Ez)','Im(Ez)','Re(Hx)','Im(Hx)','Re(Hy)','Im(Hy)','Re(Hz)','Im(Hz)','Re(Sx)','Im(Sx)','Re(Sy)','Im(Sy)','Re(Sz)','Im(Sz)','Ex','Ey','Ez','Hx','Hy','Hz','|E|'])
     
     return Fekofield(source,power,frequency,coordSystem, xSamples, ySamples, zSamples,standard,df)
 
+def plotSimulationMethod(df):
+    Sarray = np.linspace(1, 100, 50)
+    for S in Sarray:
+        test = df.loc[df['S'] >= S]
+        X = test.groupby(['Y','Z'])['X'].max()
+        plt.plot(test['Y'].unique(),X)
+    plt.show()
+        #mlab.mesh(x, y, test['Z'])
+        #mlab.show()
 
 # all Sector coverage arrays
-def SpacialAverageCylindricalEstimation(phi,R,P = 80,AHPBW = 85,L = 2.25,G= 17,y = 0,ry = None):
+def AverageCylindricalSector(phi,R,P = 80,AHPBW = 85,L = 2.25,G= 17,y = 0,ry = None):
     G = 10**(G/10)
     AHPBW = np.pi*AHPBW/180
     ro = AHPBW*G*L*np.cos(y)**2/12
-
-    
     ry = R/np.cos(y)
     return P*2**(-1*(2*phi/AHPBW)**2)/(AHPBW*ry*L*(np.cos(y)**2)*np.sqrt(1 + (ry/ro)**2))
 
-def SpacialPeakCylindricalEstimation(phi,R,P = 80,AHPBW = 85,L = 2.25,G= 17,y = 0):
+def PeakCylindricalSector(phi,R,P = 80,AHPBW = 85,L = 2.25,G= 17,y = 0):
     G = 10**(G/10)
     AHPBW *= np.pi/180
     ro = AHPBW*G*L*np.cos(y)**2/12
-    ry = 0
     ry = R/np.cos(y)
     return 2*P*2**(-4*(phi/AHPBW)**2)/(AHPBW*ry*L*np.cos(y)**2*np.sqrt(1 + (2*ry/ro)**2))
 
@@ -217,6 +230,7 @@ def AdjustedSphericalSector(theta,phi,R,power = 80, VHPBW = 8.5, AHPBW = 85, L =
 
 def SimpleSphericalSector(theta,phi,R,power = 80, VHPBW = 8.5, AHPBW = 85, L = 2.25, G = 17,Globe = 0, y = 0):
     G = 10**(G/10)
+    Globe = 10**(Globe/10)
     VHPBW *= np.pi/180
     AHPBW *= np.pi/180
     b1 = (2*(theta - y - np.pi/2)/VHPBW)**2
@@ -225,88 +239,140 @@ def SimpleSphericalSector(theta,phi,R,power = 80, VHPBW = 8.5, AHPBW = 85, L = 2
     return power*Gphitheta/(4*np.pi*R**2)
 
 
+def AverageCylindricalOmni(R, power = 80, VHPBW = 8.5, AHPBW = 85,G = 17, L =2.25, y = 0 ):
+    G = 10**(G/10)
+    VHPBW *= np.pi/180
+    AHPBW *= np.pi/180
+    ry = R/np.cos(y)
+    ro = G*L*np.cos(y)**2/2
+    return  power/(2*np.pi*ry*L*np.cos(y)**2*np.sqrt(1 + (ry/ro)**2))
 
-def ClassicalSpherical(df,power = 80, L = 2.25):
-    return df['|E|']**2/(377)
+def PeakCylindricalOmni(R, power = 80, L = 2.25, G = 17, y = 0):
+    G = 10**(G/10)
+    VHPBW *= np.pi/180
+    AHPBW *= np.pi/180
+    ry = R/np.cos(y)
+    ro = G*L*np.cos(y)**2/2
+    return  power/(np.pi*ry*L*np.cos(y)**2*np.sqrt(1 + (2*ry/ro)**2))
 
-#def plotValidation1(*method):
-#    for meth in method:
+def SimpleSphericalOmni(theta,R,power = 80, VHPBW = 8.5, AHPBW = 85, L = 2.25, G = 17,Globe = -3.6, y = 0):
+    G = 10**(G/10)
+    Globe = 10**(Globe/10)
+    VHPBW *= np.pi/180
+    AHPBW *= np.pi/180
+    b1 = (2*(theta - y - np.pi/2)/VHPBW)**2
+    Gphitheta = Globe + G*2**(-b1)
+    return power*Gphitheta/(4*np.pi*R**2)
 
-def nearSurface(ff,P = 80, h = 2.25, AHPBW = 8.5,dipoles = 9):
-    x = 0.1
-    linegain = ff.loc[ff['Phi'] == 0]
-    Z = np.linspace(-1.4,1.4,15)
-    R = [np.sqrt(z**2 + x**2) for z in Z]
-    angle = [np.round(np.abs(np.arcsin(x/r)*180/np.pi)) for r in R]
-    D = []
-    for a in angle:
-        D.append(linegain.loc[linegain['Theta'] == a,'Directivity(Total)'].to_numpy()[0])
-    #S0 = [180*P/(dipoles*AHPBW*2*np.pi*np.sqrt(x**2 + (z+1.25)**2)*h) for z in Z]
-    S1 = [180*P*(dipoles*AHPBW*2*np.pi*np.sqrt(x**2 + (z+1)**2)*h) for z in Z]
-    S2 = [180*P/(dipoles*AHPBW*2*np.pi*np.sqrt(x**2 + (z+0.75)**2)*h) for z in Z]
-    S3 = [180*P/(dipoles*AHPBW*2*np.pi*np.sqrt(x**2 + (z+0.5)**2)*h) for z in Z]
-    S4 = [180*P/(dipoles*AHPBW*2*np.pi*np.sqrt(x**2 + (z+0.25)**2)*h) for z in Z]
-    S5 = [180*P/(dipoles*AHPBW*2*np.pi*np.sqrt(x**2 + (z)**2)*h) for z in Z]
-    S6 = [180*P/(dipoles*AHPBW*2*np.pi*np.sqrt(x**2 + (z-0.25)**2)*h) for z in Z]
-    S7 = [180*P/(dipoles*AHPBW*2*np.pi*np.sqrt(x**2 + (z-0.5)**2)*h) for z in Z]
-    S8 = [180*P/(dipoles*AHPBW*2*np.pi*np.sqrt(x**2 + (z-0.75)**2)*h) for z in Z]
-    S9 = [180*P/(dipoles*AHPBW*2*np.pi*np.sqrt(x**2 + (z-1)**2)*h) for z in Z]
-    #S10 =[180*P/(dipoles*AHPBW*2*np.pi*np.sqrt(x**2 + (z-1.25)**2)*h) for z in Z]
-    temp = []
-    for i in range(len(Z)):
-        temp.append( (D[i]+2)*(S1[i] +  S2[i] + S3[i] + S4[i] + S5[i] + S6[i] + S7[i] + S8[i] + S9[i]))
-    return D
-    
+def AdjustedSphericalOmni(theta,R,power = 80, VHPBW = 8.5, AHPBW = 85, L = 2.25, G = 17,Globe = -3.6, y = 0):
+    G = 10**(G/10)
+    Globe = 10**(Globe/10)
+    VHPBW *= np.pi/180
+    AHPBW *= np.pi/180
+    b1 = (theta - y - np.pi/2)/VHPBW
+    Gphitheta = 1.26*Globe + G*2**(-b1**2)
+    return power*Gphitheta/(4*np.pi*R**2)
 
-#def CreateField(antenna,source='IEC-62232-panel-antenna',date=0,configuration='Created',frequency = f)
-#   return fieldSolved(name,Fileformat,source,date,solverV,configuration,frequency,coordSystem, xSamples, ySamples, zSamples,df)
+def Classical(E):
+    S = []
+    for i in range(len(E)):
+        S.append(E[i]**2/377)
+    return np.array(S)
 
-def test1():
+def OET65Equation3_Dynamic(R,G,power = 80):
+    return [power*10**(g/10)/(4*np.pi*r**2) for g,r in zip(G,R)]
+
+def CylindricalValidationTest():
+    SectorCoverageSbar = [5.58, 3.54, 2.49, 1.86, 1.43, 1.02, 0.639]
+    SectorCoverageS = [9.96, 5.74, 3.70, 2.56, 1.86, 1.25, 0.727]
+    f = 925
+    lamda = (3*10**8)/(f*10**6)
+    power = 80
+    L = 2.158
+    AHPBW = 84
+    y = 5
+    Gs = 17 #dBi
+    Go = 11 #dBi
+    Globe = -9      #dBi
+    Globe = -3.6    #dBi
+    phi = np.pi/12
+    Ry = [4, 6, 8, 10, 12, 15, 20]
+    R = [ry*np.cos(y*np.pi/180) for ry in Ry]
+
+    SectorAverage = AverageCylindricalSector(phi,R,power,AHPBW, L,Gs, y*np.pi/180,Ry)
+    SectorPeak = PeakCylindricalSector(phi,R,power,AHPBW, L, Gs, y=y*np.pi/180)
+
+    plt.figure()
+    plt.plot(Ry,SectorAverage,label = 'SpacialPeakCylindrical')
+    plt.plot(Ry,SectorCoverageS,label = 'Peak Cylindrical Validation line')
+    plt.plot(Ry,SectorCoverageSbar,label = 'Average Cylindrical Validation line')
+    plt.plot(Ry,SectorPeak,label = 'SpacialAverageCylindrical')
+    plt.legend()
+    plt.show()
+
+
+def SphericalValidationTest():
+    adjustedSectorS = [52, 353, 313, 210, 141, 98.6, 72, 54.5 ]
+    adjustedSectorS = [a/1000 for a in adjustedSectorS]
+    SectorCoverageS = [9.96, 5.74, 3.70, 2.56, 1.86, 1.25, 0.727]
+    f = 925
+    lamda = (3*10**8)/(f*10**6)
+    power = 80
+    L = 2.158
+    Gs = 17 #dBi
+    Go = 11 #dBi
+    Globes = -3.6     #dBi
+    Globe0 = -9   #dBi
+    phi = np.pi/12
+    Ry = np.linspace(10,80,8)
+    R = [np.sqrt(ry**2 + 5**2) for ry in Ry]
+    R = np.array(R)
+    theta = [np.pi/2 + np.arctan(5/ry) for ry in Ry]
+    theta = np.array(theta)
+    Ry = np.array(Ry)
+
+    adjustedSpherical = AdjustedSphericalSector(theta = theta, phi=phi, R = Ry,power = power, VHPBW=8, AHPBW=84, L = L, G=Gs, Globe=Globes, y =5*np.pi/180 )
+    plt.figure()
+    plt.plot(Ry,adjustedSpherical,label = 'SpacialPeakCylindrical')
+    plt.plot(Ry,adjustedSectorS,label = 'Adjusted Spherical Validation line')
+    #plt.plot(Ry,SectorCoverageSbar,label = 'Average Cylindrical Validation line')
+    #plt.plot(Ry,SectorPeak,label = 'SpacialAverageCylindrical')
+    plt.legend()
+    plt.show()
+
+
+
+def Validationtest1():
     ff = GetFarField('test1.ffe')
-    f = ff.loc[(ff['Directivity(Total)'] > 11.96) & (ff['Directivity(Total)'] < 12.1) & (ff['Phi'] < 181) & (ff['Theta'] == 90)]
-    print(f.sort_values(by = ['Directivity(Total)']))
 
-    line3near = nearSurface(ff = ff)
-        #line1
-    def ffline1():
-        line1 = 10**(ff.loc[(ff['Phi'] == 0) & (ff['Theta'] == 90),'Directivity(Total)'].to_numpy()[0]/10)
-        #line1 = (ff.loc[(ff['Phi'] == 0) & (ff['Theta'] == 90),'Directivity(Total)'].to_numpy()[0])
-        R = np.linspace(0.5,4,8)
-        return [80*line1/(4*np.pi*r**2) for r in R]
+    #line1
+    line1G = ff.loc[(ff['Phi'] == 0) & (ff['Theta'] == 90),'Directivity(Total)'].to_numpy()
+    line1G = [line1G for i in range(80)]
+    R = np.linspace(0.5,4,8)
+    line1S = OET65Equation3_Dynamic(R,line1G)
     
     #line2
-    def ffline2(x = 1):
-        line2 = ff.loc[(ff['Phi'] < 181) & (ff['Theta'] == 90)]
-        Y = np.linspace(-1.4,1.4,15)
-        R = [np.sqrt(y**2 + x**2) for y in Y]
-        angle = [np.abs(np.round(np.arccos(x/r)*180/np.pi)) for r in R]
-        D = []
-        for a in angle:
-            D.append(10**(line2.loc[line2['Phi'] == a,'Directivity(Total)'].to_numpy()[0]/10))
-
-#            D.append(line2.loc[line2['Phi'] == a,'Directivity(Total)'].to_numpy()[0])
-
-        #num = [10**(d/10) for d in D]
-        #lamda = 1/3
-        #D = [20*np.log10(9.73/(lamda*np.sqrt(n))) for n in num]
-
-        return [80*d/(4*np.pi*r**2) for d,r in zip(D,R) ]
+    line2 = ff.loc[(ff['Phi'] < 181) & (ff['Theta'] == 90)]
+    x = 1
+    Y = np.linspace(-40,40,401)
+    R = [np.sqrt(y**2 + x**2) for y in Y]
+    angle = [np.abs(np.round(np.arccos(x/r)*180/np.pi)) for r in R]
+    line2G = []
+    for a in angle:
+        line2G.append(line2.loc[line2['Phi'] == a,'Directivity(Total)'].to_numpy()[0])
+    line2S = OET65Equation3_Dynamic(R,line2G)
 
 
-
-    def ffline3(x = 0.1):
-        linegain = ff.loc[ff['Phi'] == 0]
-        Z = np.linspace(-1.4,1.4,15)
-        R = [np.sqrt(z**2 + x**2) for z in Z]
-        angle = [np.round(np.abs(np.arcsin(x/r)*180/np.pi)) for r in R]
-        D = []
-        for a in angle:
-            D.append(10**(linegain.loc[linegain['Theta'] == a,'Directivity(Total)'].to_numpy()[0]/10))
-        #num = [10**(d/10) for d in D]
-        #lamda = 1/3
-        #D = [20*np.log10(9.73/(lamda*np.sqrt(n))) for n in num]
-        return [80*d/(4*np.pi*r**2) for d,r in zip(D,R) ]
-        
+    line3 = ff.loc[ff['Phi'] == 0]
+    Z = np.linspace(-40,40,401)
+    x = 0.1
+    R = [np.sqrt(z**2 + x**2) for z in Z]
+    angle = [np.round(np.abs(np.arcsin(x/r)*180/np.pi)) for r in R]
+    line3G = []
+    for a in angle:
+        line3G.append(line3.loc[line3['Theta'] == a,'Directivity(Total)'].to_numpy()[0])
+    line3S = OET65Equation3_Dynamic(R,line3G)
+    
 
 
     FCCoccupational = 30#getZone(900,'FCC')[1]
@@ -318,38 +384,161 @@ def test1():
     IXUS2_persentage_occupation = [19.2, 29.18, 44.46, 66.19, 91.01, 114.7, 133, 138.7, 132.1, 114.1, 90.44, 65.52, 44.46, 29.18, 19.19]
     IXUS3_persentage_occupation = [3.623, 24.51, 595, 273.1, 508.7, 682.9, 869.8, 1279, 886.2, 683.6, 505.8, 267.4, 594.2, 24.24, 3.706]
 
-
     def Doline(*lines):
         
         for line in lines:
             plt.figure()
-            plt.plot(line['1D'], line['l'],label = 'Validation line')
-            plt.plot(line['1D'], line['IXUS'],label = 'IXUS')
-            plt.plot(line['1D'], line['S(E)'], label = '|E|^2/377')
-            plt.plot(line['1D'],line['Sff'],label = 'Sff')
-            #plt.plot(line['1D'], line['S(ExH)'], label = 'S=ExH')
-            plt.plot(line['1D'], line['Snear'], label = 'Snear')
-            #plt.plot(line['1D'], line['Sfar'], label = 'Sfar')
-            #plt.plot(np.linspace(-1.4,1.4,15),line3near,label = 'nearSurface')
-
-            #axs[0, 0].plot(line1.df['X'], line1.df['S(R)far'], label = 'S(R)far')
+            #plt.plot(line['1D'], line['l'],label = 'Validation line')
+            #plt.plot(line['1D'], line['IXUS'],label = 'IXUS')
+            #plt.plot(line['1D'], line['Classical'], label = 'Classical')
+            #plt.plot(line['1D'],line['OET65Equation3_Dynamic'],label = 'OET65Equation3_Dynamic')
+           # plt.plot(line['1D'],line['OET65Equation3_Static'],label = 'OET65Equation3_Static')
+            plt.plot(line['1D'], line['Full wave'], label = 'Full wave')
+            plt.plot(line['1D'], line['OET651'], label = 'OET651')
+            plt.plot(line['1D'], line['OET652'], label = 'OET652')
+            plt.plot(line['1D'], line['ICNIRP Peak'], label = 'ICNIRP Peak')
+            plt.plot(line['1D'], line['ICNIRP Average'], label = 'ICNIRP Average')
+            #plt.plot(line['1D'], line['Peak Cylindrical'], label = 'Peak Cylindrical')
+            #plt.plot(line['1D'], line['Average Cylindrical'], label = 'Average Cylindrical')
+            #plt.plot(line['1D'], line['Adjusted Spherical'], label = 'Adjusted Spherical')
+            #plt.plot(line['1D'], line['Simple Spherical'], label = 'Simple Spherical')
             plt.legend()
 
 
     line1 = GetField('IEC-62232-panel-antenna (4)_Line1.efe','IEC-62232-panel-antenna (4)_Line1.hfe',compress=False, power=80).df
-    line1['IXUS'] = [x/100*FCCoccupational for x in IXUS1_persentage_occupation]
-    line1['Sff'] = ffline1()
-    line1['l'] = l1
+    #line1 = line1.loc[line1['X'] < 4.1]
+    #line1['IXUS'] = [x/100*FCCoccupational for x in IXUS1_persentage_occupation]
+    #line1['l'] = l1
+
     line2 = GetField('IEC-62232-panel-antenna (4)_Line2.efe','IEC-62232-panel-antenna (4)_Line2.hfe',compress=False, power=80).df
-    line2['IXUS'] = [x/100*FCCoccupational for x in IXUS2_persentage_occupation]
-    line2['Sff'] = ffline2()
-    line2['l'] = l2
+   # line2 = line2.loc[(line2['Y'] < 5) & (line2['Y'] > -5)]
+    #line2['IXUS'] = [x/100*FCCoccupational for x in IXUS2_persentage_occupation]
+    #line2['l'] = l2
+
     line3 = GetField('IEC-62232-panel-antenna (4)_Line3.efe','IEC-62232-panel-antenna (4)_Line3.hfe',compress=False, power=80).df
-    line3['IXUS'] = [x/100*FCCoccupational for x in IXUS3_persentage_occupation]
-    line3['Sff'] = ffline3()
-    line3['l'] = l3
+    #line3 = line3.loc[(line3['Z'] < 5) & (line3['Z'] > -5)]
+    #line3['IXUS'] = [x/100*FCCoccupational for x in IXUS3_persentage_occupation]
+    #line3['l'] = l3
 
     Doline(line1.rename(columns = {'X': '1D'}), line2.rename(columns = {'Y': '1D'}),line3.rename(columns = {'Z': '1D'}))
     
     plt.show()
+
+
+
+
+
+##Near field
+def getEfficiency(G = 17, f = 900,A = 2.25*0.3):
+    lamda = 3*10**8/(f*10**6)
+    #return (10**(G/10)*lamda**2)/(4*np.pi*A)
+
+    top = 10**(G/10)*lamda**2/(4*np.pi)
+    bottom =  np.pi*2.25**2/4#np.pi*2.25**2/4
+    return top/bottom
+
+def Ssurface(P = 80, A = 2.25*0.3):
+    return 4*P/A
+
+def Snf(G = 17, f = 900,w = 0.3,D = 2.25,power = 80):
+    A = w*D
+    n = getEfficiency(G, f, A)
+    return 16*n*power/(np.pi*D**2)
+
+def St(R):
+    return Snf()*Rnf()/R
+
+
+def Rnf(D = 2.25, f = 900):
+    lamda = 3*10**8/(f*10**6)
+    return D**2/(4*lamda)
+
+def Rff(D = 2.25,f = 900):
+    lamda = 3*10**8/(f*10**6)
+    return 0.6*D**2/lamda
+
+def Sff(R, power = 80, G = 17):
+    return power*10**(G/10)/(4*np.pi*R**2) 
+
+def OET65near(R, power = 80, D = 2.25, AHPBW = 85):
+    return power*180/(R*D*AHPBW*np.pi)
+
+
+#VSA pel average
+#def OET65near(R, power = 80, D = 2.25, AHPBW = 85):
+#    AHPBW = AHPBW*np.pi/180
+#    return power/(R*D*AHPBW)
+
+
+def OET65far(R,power = 80, G = 17):
+    G = 10**(G/10)
+    return power*G/(4*np.pi*R**2)
+
+def OET65Modified(D = 2.25):
+    Rtrans = D*1.5
+    Rfar = Rff()
+    return OET65near(Rtrans)*1/(Rfar/Rtrans)**2
+
+def ICNIRPmeshPeak(R, phi, theta, f = 900, D = 2.25):
+    lamda = 3*10**8/(f*10**6)
+    Rreactive = 0.62*np.sqrt(D**3/lamda)
+    Rnearfield = 2*D**2/lamda
+    S = []
+    for i in range(len(R)):
+        if np.abs(R[i]) < Rnearfield:
+            S.append(PeakCylindricalSector(phi[i],R[i]))
+        elif np.abs(R[i]) > Rnearfield:
+            S.append(AdjustedSphericalSector(theta[i], phi[i], R[i]))
+    return np.array(S)
+
+def ICNIRPmeshAverage(R, phi, theta, f = 900, D = 2.25):
+    lamda = 3*10**8/(f*10**6)
+    Rreactive = 0.62*np.sqrt(D**3/lamda)
+    Rnearfield = 2*D**2/lamda
+    S = []
+    for i in range(len(R)):
+        if np.abs(R[i]) < Rnearfield:
+            S.append(AverageCylindricalSector(phi[i],R[i]))
+        elif np.abs(R[i]) > Rnearfield:
+            S.append(SimpleSphericalSector(theta[i], phi[i], R[i]))
+    return np.array(S)
+
+def OET65mesh1(R, D = 2.25, f = 900):
+    lamda = 3*10**8/(f*10**6)
+    Rreactive = 0.62*np.sqrt(D**3/lamda)
+    Rnearfield = 2*D**2/lamda
+    S =[]
+    for i in range(len(R)):
+        if R[i] < Rnearfield:
+            S.append(OET65near(R[i]))
+        elif R[i] > Rnearfield:
+            S.append(OET65far(R[i]))
+    return np.array(S)
+    
+
+def OET65mesh2(R, f = 900,D = 2.25, a = True):
+    lamda = 3*10**8/(f*10**6)
+    Rreactive = 0.62*np.sqrt(D**3/lamda)
+    Rnearfield = 2*D**2/lamda
+    S = []
+    if (a == True):
+        for i in range(len(R)):
+            if R[i] < 0.5:
+                S.append(Ssurface())
+            elif np.abs(R[i]) < Rnf():
+                S.append(Snf())
+            elif np.abs(R[i]) > Rff():
+                S.append(Sff(R[i]))
+            else:
+                S.append(St(R[i]))
+        return np.array(S)
+    else:
+        for i in range(len(R)):
+            if np.abs(R[i]) < Rnearfield:
+                S.append(Snf())
+            elif np.abs(R[i]) > Rnearfield:
+                S.append(Sff(R[i]))
+            else:
+                S.append(St(R[i]))
+        return np.array(S)
 
