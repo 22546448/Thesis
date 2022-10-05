@@ -1,3 +1,4 @@
+from cProfile import label
 from cmath import cos, sin
 from fileinput import filename
 from platform import freedesktop_os_release
@@ -111,7 +112,7 @@ def plotFarField(df):
     mlab.mesh(x, y, z)
     mlab.show()
 
-def GetField(filenameE,filenameH,S = 'S(E)',compress = False,standard = 'FCC',power = 80):
+def GetField(filenameE,filenameH,S = 'S(E)',compress = False ,standard = 'FCC',power = 80):
     source= ''
     frequency= 900
     coordSystem= ''
@@ -147,7 +148,7 @@ def GetField(filenameE,filenameH,S = 'S(E)',compress = False,standard = 'FCC',po
         df = df.astype(float)
         df['R'] = np.sqrt(df['X']**2 + df['Y']**2 + df['Z']**2)
         df['phi'] = np.arctan(df['Y']/df['X'])
-        df['theta'] = np.arcsin(df['X']/df['R'])
+        df['theta'] = np.arctan(df['X']/df['Z'])
     file.close()
 
     with open(filenameH, 'r') as file:
@@ -176,32 +177,109 @@ def GetField(filenameE,filenameH,S = 'S(E)',compress = False,standard = 'FCC',po
     df['Hz'] = (df['Re(Hz)'] + df['Im(Hz)']*1j)/np.sqrt(2)
 
     df['|E|'] = np.sqrt(np.absolute(df['Ex'])**2+ np.absolute(df['Ey'])**2 + np.absolute(df['Ez'])**2)
+
+    #df['Hx'] = np.conj(df['Hx'])
+    #df['Hy'] = np.conj(df['Hy'])
+    #df['Hz'] = np.conj(df['Hz'])
     df['Sx'] = df['Ey']*df['Hz'] - df['Ez']*df['Hy']
     df['Sy'] = df['Ez']*df['Hx'] - df['Ex']*df['Hz']
     df['Sz'] = df['Ex']*df['Hy'] - df['Ey']*df['Hx']
 
     df['Full wave'] = np.sqrt(np.absolute(df['Sx'])**2 + np.absolute(df['Sy'])**2 + np.absolute(df['Sz'])**2)
     df['Classical'] = Classical(df['|E|'].to_numpy())
-    df['OET652'] = OET65mesh1(df['R'])
-    df['OET651'] = OET65mesh2(df['R'])
+    df['OET65'] = OET65mesh1(df['R'])
+    #df['OET651'] = OET65mesh2(df['R'])
     df['ICNIRP Peak'] = ICNIRPmeshPeak(df['R'], df['phi'], df['theta'])
     df['ICNIRP Average'] = ICNIRPmeshAverage(df['R'], df['phi'], df['theta'])
 
     df['S'] = df['Full wave']
     if compress:
-        df = df.drop(columns = ['Re(Ex)','Im(Ex)','Re(Ey)','Im(Ey)','Re(Ez)','Im(Ez)','Re(Hx)','Im(Hx)','Re(Hy)','Im(Hy)','Re(Hz)','Im(Hz)','Re(Sx)','Im(Sx)','Re(Sy)','Im(Sy)','Re(Sz)','Im(Sz)','Ex','Ey','Ez','Hx','Hy','Hz','|E|'])
+        df = df.drop(columns = ['R','Re(Ex)','Im(Ex)','Re(Ey)','Im(Ey)','Re(Ez)','Im(Ez)','Re(Hx)','Im(Hx)','Re(Hy)','Im(Hy)','Re(Hz)','Im(Hz)','Ex','Ey','Ez','Hx','Hy','Hz','|E|','Sx','Sy','Sz','|Ex|','|Ey|','|Ez|','Full wave'])
     
     return Fekofield(source,power,frequency,coordSystem, xSamples, ySamples, zSamples,standard,df)
 
-def plotSimulationMethod(df):
-    Sarray = np.linspace(1, 100, 50)
-    for S in Sarray:
-        test = df.loc[df['S'] >= S]
-        X = test.groupby(['Y','Z'])['X'].max()
-        plt.plot(test['Y'].unique(),X)
+def test_mesh(df,error = 1,S = 10):
+
+    temp = df.loc[(df['S'] >= S-error) & (df['S'] < S+error)]
+    temp = temp.sort_values(by = ['phi','theta','R'])
+
+    #idx = temp.groupby(['theta','phi'])['S'].transform(max) == temp['S']
+    #temp = temp.sort_values(by = ['theta','phi'])
+    #temp = temp[idx]
+
+    mlab.figure(bgcolor=(1, 1, 1))  # Make background white.
+    mesh = mlab.mesh(temp['X'],temp['X'],temp['X'])
+    #points3D = mlab.points3d(temp['X'],temp['Y'],temp['Z'])
+    mlab.outline(color=(0, 0, 0))
+    axes = mlab.axes(color=(0, 0, 0), nb_labels=5)
+    axes.title_text_property.color = (0.0, 0.0, 0.0)
+    axes.title_text_property.font_family = 'times'
+    axes.label_text_property.color = (0.0, 0.0, 0.0)
+    axes.label_text_property.font_family = 'times'
+    # mlab.savefig("vector_plot_in_3d.pdf")
+    mlab.gcf().scene.parallel_projection = True  # Source: <<https://stackoverflow.com/a/32531283/2729627>>.
+    mlab.orientation_axes()  # Source: <<https://stackoverflow.com/a/26036154/2729627>>.
+    mlab.show()
+
+
+def plotSZones(df, *args,Y = 'y', X = 'x', error = 0.01,round = 3):
+    for S in args:
+        temp = df.loc[(df['S'] >= S-error) & (df['S'] < S+error)]
+        temp['theta'] = np.round(temp['theta'],round)
+        temp['phi'] = np.round(temp['phi'],round)
+        idx = temp.groupby(['phi','theta'])['S'].transform(max) == temp['S']
+        temp = temp.sort_values(by = ['phi'])
+        plt.plot(temp[idx]['X'],temp[idx]['Y'], '-',label = 'Full wave = {}W/m'.format(S))
+
+        temp = df.loc[(df['ICNIRP Peak'] >= S-error) & (df['ICNIRP Peak'] < S+error)]
+        temp['theta'] = np.round(temp['theta'],round)
+        temp['phi'] = np.round(temp['phi'],round)
+        idx = temp.groupby(['phi','theta'])['ICNIRP Peak'].transform(max) == temp['ICNIRP Peak']
+        plt.plot(temp[idx]['X'],temp[idx]['Y'],'o', label = 'ICNIRP = {}W/m'.format(S))
+
+        temp = df.loc[(df['OET65'] >= S-error) & (df['OET65'] < S+error)]
+        temp['theta'] = np.round(temp['theta'],round)
+        temp['phi'] = np.round(temp['phi'],round)
+        idx = temp.groupby(['phi','theta'])['OET65'].transform(max) == temp['OET65']
+        plt.plot(temp[idx]['X'],temp[idx]['Y'], '+',label = 'OET 65 = {} W/m'.format(S))
+
+    plt.title('Comparing various simulation methods of a 900Mhz,80W sector antenna at various S values')
+    plt.xlabel('X (m)')
+    plt.ylabel('Y (m)')
+    plt.legend()
+    plt.xlim([0,40])
+    plt.ylim([-40,40])
     plt.show()
-        #mlab.mesh(x, y, test['Z'])
-        #mlab.show()
+
+
+def plotByCartesian(df, *X,error = 0.1):
+    for x in X:
+        temp = df.loc[(df['X'] >= x-error) & (df['X'] < x+error)]
+        idx = temp.groupby(['Z','Y'])['X'].transform(max) == temp['X']
+        plt.plot(temp[idx]['Y'],temp[idx]['S'],'o',label = 'Full wave at {}m'.format(x))
+        plt.plot(temp[idx]['Y'],temp[idx]['ICNIRP Average'],'+' ,label ='ICNIRP at {}m'.format(x))
+        plt.plot(temp[idx]['Y'],temp[idx]['OET65'],'-' ,label ='OET 65 at {}m'.format(x))
+    plt.legend()
+    plt.xlabel('Y (m)')
+    plt.ylabel('S (W/m)')
+    plt.ylim([0,20])
+    plt.title( 'Comparing various simulation methods of a 900Mhz,80W sector antenna at various x positions')
+    plt.show()
+
+def plotByCylindrical(df):
+    R  = np.linspace(1, 10, 5)
+    for r in R:
+        temp = df.loc[(df['R'] <= r) & (df['R'] > r-0.05)]
+        idx = temp.groupby(['phi','theta'])['R'].transform(max) == temp['R']
+        phi = np.round(temp[idx]['phi'],2)
+        theta = np.round(temp[idx]['theta'],2)
+        x = temp[idx]['R']*np.sin(theta)*np.cos(phi)
+        y = temp[idx]['R']*np.sin(theta)*np.sin(phi)
+        z = temp[idx]['R']*np.cos(theta)
+        plt.plot(temp[idx]['Y'],temp[idx]['S'],label = r)
+        plt.legend()
+    plt.show()
+
 
 # all Sector coverage arrays
 def AverageCylindricalSector(phi,R,P = 80,AHPBW = 85,L = 2.25,G= 17,y = 0,ry = None):
@@ -464,12 +542,6 @@ def OET65near(R, power = 80, D = 2.25, AHPBW = 85):
     return power*180/(R*D*AHPBW*np.pi)
 
 
-#VSA pel average
-#def OET65near(R, power = 80, D = 2.25, AHPBW = 85):
-#    AHPBW = AHPBW*np.pi/180
-#    return power/(R*D*AHPBW)
-
-
 def OET65far(R,power = 80, G = 17):
     G = 10**(G/10)
     return power*G/(4*np.pi*R**2)
@@ -478,6 +550,7 @@ def OET65Modified(D = 2.25):
     Rtrans = D*1.5
     Rfar = Rff()
     return OET65near(Rtrans)*1/(Rfar/Rtrans)**2
+
 
 def ICNIRPmeshPeak(R, phi, theta, f = 900, D = 2.25):
     lamda = 3*10**8/(f*10**6)
