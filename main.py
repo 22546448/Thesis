@@ -37,6 +37,6 @@ df = GetField('IEC-62232-panel-antenna (3)_NearField1.efe','IEC-62232-panel-ante
 #plotByCartesian(df,1)
 
 plotSZones(df,0.345, error = 0.01)
-##
+
 
 #Validationtest1()
