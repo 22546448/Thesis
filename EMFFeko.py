@@ -112,6 +112,18 @@ def plotFarField(df):
     mlab.mesh(x, y, z)
     mlab.show()
 
+def GetGain(phi,theta, filename = "IEC-62232-panel-antenna_FarField1.ffe"):
+    FarField = GetFarField(filename,False)[['Theta','Phi','Directivity(Total)']]
+    #FarField_Grouped = FarField.groupby()
+    gain = []
+    print(len(phi))
+    for i in range(len(phi)): 
+        p = np.round(theta[i]*180/(2*np.pi))
+        t =np.round(phi[i]*180/(2*np.pi))
+       #print('{} and {}'.format(p,t))
+        gain.append(FarField.loc[(FarField['Theta'] == p) & (FarField['Phi'] ==  t),'Directivity(Total)'].to_numpy()[0])   
+    return np.array(gain)
+
 def GetField(filenameE,filenameH,S = 'S(E)',compress = False ,standard = 'FCC',power = 80):
     source= ''
     frequency= 900
@@ -221,7 +233,7 @@ def test_mesh(df,error = 1,S = 10):
     mlab.orientation_axes()  # Source: <<https://stackoverflow.com/a/26036154/2729627>>.
     mlab.show()
 
-
+#def plotSbyPhase
 def plotSZones(df, *args,Y = 'y', X = 'x', error = 0.01,round = 3):
     for S in args:
         temp = df.loc[(df['S'] >= S-error) & (df['S'] < S+error)]

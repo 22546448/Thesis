@@ -14,12 +14,11 @@ import mayavi.mlab as mlab
 
 
 
-#df = GetField('IEC-62232-panel-antenna (3)_NearField3.efe','IEC-62232-panel-antenna (3)_NearField3.hfe').df
 
 
-xrange = np.arange(0.1, 20, 0.15)
-yrange = np.arange(-20, 20, 0.15)
-zrange = np.arange(-20, 20, 0.15)
+xrange = np.arange(0.1, 20, 2)
+yrange = np.arange(-20, 20, 2)
+#zrange = np.arange(-20, 20, 2)
 
 x,y,z = np.meshgrid(xrange, yrange, zrange)
 
@@ -30,13 +29,7 @@ df['R'] = np.sqrt(df['X']**2 + df['Y']**2 + df['Z']**2)
 df['phi'] = np.arccos(df['X']/df['R'])
 df['theta'] = np.arccos(df['Z']/df['R'])
 df['S'] = PeakCylindricalSector(df['phi'], df['R'])
-#test_mesh(df, error = 0.5)
+df['Gain'] = GetGain(df['phi'],df['theta'])
 
-df = GetField('IEC-62232-panel-antenna (3)_NearField1.efe','IEC-62232-panel-antenna (3)_NearField1.hfe').df
-
-#plotByCartesian(df,1)
-
-plotSZones(df,0.345, error = 0.01)
-
-
-#Validationtest1()
+print(df['Gain'])
+plotByCartesian(df)
