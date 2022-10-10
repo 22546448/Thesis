@@ -18,7 +18,7 @@ import mayavi.mlab as mlab
 
 xrange = np.arange(0.1, 20, 2)
 yrange = np.arange(-20, 20, 2)
-#zrange = np.arange(-20, 20, 2)
+zrange = np.arange(-20, 20, 2)
 
 x,y,z = np.meshgrid(xrange, yrange, zrange)
 
