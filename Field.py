@@ -1,12 +1,12 @@
 
 from matplotlib import pyplot as plt
 import numpy as np
+from numpy import *
 import pandas as pd
-from pandas import HDFStore
-import math  
+import pandas as pd
 import mayavi.mlab as mlab
 from Standard import getZone
-import time
+
 
 
 import warnings
@@ -168,4 +168,398 @@ class Field:
 
         if show:
             plt.show()
+
+
+def GetFarField(filename,compress = True,standard = 'FCC',power = 80):
+    source= ''
+    frequency= 900
+    coordSystem= ''
+    thetaSamples = 0
+    phiSamples = 0
+    global i
+    i = 0
+    filenameff = 'venv/Include/CADFeko/{}'.format(filename)
+
+    with open(filenameff, 'r') as file:
+        for line in file:
+            if '##Source: ' in line:
+                source = line[:-1].split("##Source: ",1)[1]
+            elif "#Frequency: " in line:
+                frequency = int(float(line[:-1].split("#Frequency:   ",1)[1]))  
+            elif "#Coordinate System: " in line:
+                coordSystem = line[:-1].split("#Coordinate System: ",1)[1]
+            elif "#No. of Theta Samples: " in line:
+                thetaSamples = int(line[:-1].split("#No. of Theta Samples: ",1)[1])
+            elif "#No. of Phi Samples: " in line:
+                phiSamples = int(line[:-1].split("#No. of Phi Samples: ",1)[1])
+                global dataT
+                dataT = np.zeros((thetaSamples*phiSamples,9)) 
+            if line[0] != '#' and line[0] != '*' and line[0] != '\n':
+                dataT[i] = line[4:-1].split('   ')
+                i+=1
+        df = pd.DataFrame(dataT,columns=['Theta','Phi','Re(Etheta)','Im(Etheta)','Re(Ephi)','Im(Ephi)','Directivity(Theta)','Directivity(Phi)','Directivity(Total)'])
+        df = df.astype(float)
+    file.close()
+
+    df['Etheta'] = (df['Re(Etheta)'] + df['Im(Etheta)']*1j)/np.sqrt(2)
+    df['Ephi'] = (df['Re(Ephi)'] + df['Im(Ephi)']*1j)/np.sqrt(2)
+    df['|E|'] = np.sqrt(np.absolute(df['Etheta'])**2 + np.absolute(df['Ephi'])**2)
+    df['S(E)'] = df['|E|']**2/(337*2)
+    return df
+
+def plotFarField(df):
+    phi, theta  = mgrid[0:361:1,0:181:1]
+    Gnum = 10**(df['Directivity(Total)'].to_numpy()/10)
+    lamda = 1/3
+    f = Gnum
+    f = np.reshape(f,(361,181))
+    x = f*np.sin(theta*np.pi/180)*np.cos(phi*np.pi/180)
+    y = f*np.sin(theta*np.pi/180)*np.sin(phi*np.pi/180)
+    z = f*np.cos(theta*np.pi/180)
+    mlab.mesh(x, y, z)
+    mlab.show()
+
+def GetGain(phi,theta, filename = "IEC-62232-panel-antenna_FarField1.ffe"):
+    FarField = GetFarField(filename,False)[['Theta','Phi','Directivity(Total)']]
+    #FarField_Grouped = FarField.groupby()
+    gain = []
+    print(len(phi))
+    for i in range(len(phi)): 
+        p = np.round(theta[i]*180/(2*np.pi))
+        t =np.round(phi[i]*180/(2*np.pi))
+       #print('{} and {}'.format(p,t))
+        gain.append(FarField.loc[(FarField['Theta'] == p) & (FarField['Phi'] ==  t),'Directivity(Total)'].to_numpy()[0])   
+    return np.array(gain)
+
+
+def test_mesh(df,error = 1,S = 10):
+
+    temp = df.loc[(df['S'] >= S-error) & (df['S'] < S+error)]
+    temp = temp.sort_values(by = ['phi','theta','R'])
+
+    #idx = temp.groupby(['theta','phi'])['S'].transform(max) == temp['S']
+    #temp = temp.sort_values(by = ['theta','phi'])
+    #temp = temp[idx]
+
+    mlab.figure(bgcolor=(1, 1, 1))  # Make background white.
+    mesh = mlab.mesh(temp['X'],temp['X'],temp['X'])
+    #points3D = mlab.points3d(temp['X'],temp['Y'],temp['Z'])
+    mlab.outline(color=(0, 0, 0))
+    axes = mlab.axes(color=(0, 0, 0), nb_labels=5)
+    axes.title_text_property.color = (0.0, 0.0, 0.0)
+    axes.title_text_property.font_family = 'times'
+    axes.label_text_property.color = (0.0, 0.0, 0.0)
+    axes.label_text_property.font_family = 'times'
+    # mlab.savefig("vector_plot_in_3d.pdf")
+    mlab.gcf().scene.parallel_projection = True  # Source: <<https://stackoverflow.com/a/32531283/2729627>>.
+    mlab.orientation_axes()  # Source: <<https://stackoverflow.com/a/26036154/2729627>>.
+    mlab.show()
+
+#def plotSbyPhase
+def plotSZones(df, *args,Y = 'y', X = 'x', error = 0.01,round = 3):
+    for S in args:
+        temp = df.loc[(df['S'] >= S-error) & (df['S'] < S+error)]
+        temp['theta'] = np.round(temp['theta'],round)
+        temp['phi'] = np.round(temp['phi'],round)
+        idx = temp.groupby(['phi','theta'])['S'].transform(max) == temp['S']
+        temp = temp.sort_values(by = ['phi'])
+        plt.plot(temp[idx]['X'],temp[idx]['Y'], '-',label = 'Full wave = {}W/m'.format(S))
+
+        temp = df.loc[(df['ICNIRP Peak'] >= S-error) & (df['ICNIRP Peak'] < S+error)]
+        temp['theta'] = np.round(temp['theta'],round)
+        temp['phi'] = np.round(temp['phi'],round)
+        idx = temp.groupby(['phi','theta'])['ICNIRP Peak'].transform(max) == temp['ICNIRP Peak']
+        plt.plot(temp[idx]['X'],temp[idx]['Y'],'o', label = 'ICNIRP = {}W/m'.format(S))
+
+        temp = df.loc[(df['OET65'] >= S-error) & (df['OET65'] < S+error)]
+        temp['theta'] = np.round(temp['theta'],round)
+        temp['phi'] = np.round(temp['phi'],round)
+        idx = temp.groupby(['phi','theta'])['OET65'].transform(max) == temp['OET65']
+        plt.plot(temp[idx]['X'],temp[idx]['Y'], '+',label = 'OET 65 = {} W/m'.format(S))
+
+    plt.title('Comparing various simulation methods of a 900Mhz,80W sector antenna at various S values')
+    plt.xlabel('X (m)')
+    plt.ylabel('Y (m)')
+    plt.legend()
+    plt.xlim([0,40])
+    plt.ylim([-40,40])
+    plt.show()
+
+
+def plotByCartesian(df, *X,error = 0.1):
+    for x in X:
+        temp = df.loc[(df['X'] >= x-error) & (df['X'] < x+error)]
+        idx = temp.groupby(['Z','Y'])['X'].transform(max) == temp['X']
+        plt.plot(temp[idx]['Y'],temp[idx]['S'],'o',label = 'Full wave at {}m'.format(x))
+        plt.plot(temp[idx]['Y'],temp[idx]['ICNIRP Average'],'+' ,label ='ICNIRP at {}m'.format(x))
+        plt.plot(temp[idx]['Y'],temp[idx]['OET65'],'-' ,label ='OET 65 at {}m'.format(x))
+    plt.legend()
+    plt.xlabel('Y (m)')
+    plt.ylabel('S (W/m)')
+    plt.ylim([0,20])
+    plt.title( 'Comparing various simulation methods of a 900Mhz,80W sector antenna at various x positions')
+    plt.show()
+
+def plotByCylindrical(df):
+    R  = np.linspace(1, 10, 5)
+    for r in R:
+        temp = df.loc[(df['R'] <= r) & (df['R'] > r-0.05)]
+        idx = temp.groupby(['phi','theta'])['R'].transform(max) == temp['R']
+        phi = np.round(temp[idx]['phi'],2)
+        theta = np.round(temp[idx]['theta'],2)
+        x = temp[idx]['R']*np.sin(theta)*np.cos(phi)
+        y = temp[idx]['R']*np.sin(theta)*np.sin(phi)
+        z = temp[idx]['R']*np.cos(theta)
+        plt.plot(temp[idx]['Y'],temp[idx]['S'],label = r)
+        plt.legend()
+    plt.show()
+
+
+# all Sector coverage arrays
+def AverageCylindricalSector(phi,R,P = 80,AHPBW = 85,L = 2.25,G= 17,y = 0,ry = None):
+    G = 10**(G/10)
+    AHPBW = np.pi*AHPBW/180
+    ro = AHPBW*G*L*np.cos(y)**2/12
+    ry = R/np.cos(y)
+    return P*2**(-1*(2*phi/AHPBW)**2)/(AHPBW*ry*L*(np.cos(y)**2)*np.sqrt(1 + (ry/ro)**2))
+
+def PeakCylindricalSector(phi,R,P = 80,AHPBW = 85,L = 2.25,G= 17,y = 0):
+    G = 10**(G/10)
+    AHPBW *= np.pi/180
+    ro = AHPBW*G*L*np.cos(y)**2/12
+    ry = R/np.cos(y)
+    return 2*P*2**(-4*(phi/AHPBW)**2)/(AHPBW*ry*L*np.cos(y)**2*np.sqrt(1 + (2*ry/ro)**2))
+
+def AdjustedSphericalSector(theta,phi,R,power = 80, VHPBW = 8.5, AHPBW = 85, L = 2.25, G = 17,Globe = -3.6, y = 0):
+    G = 10**(G/10)
+    Globe = 10**(Globe/10)
+    VHPBW *= np.pi/180
+    AHPBW *= np.pi/180
+    b1 = (theta - y - np.pi/2)/VHPBW
+    b2 = 1.9*phi/AHPBW
+    Gphitheta = 1.26*Globe + G*2**(-b1**2-b2**2)
+    return 1.2*power*Gphitheta/(4*np.pi*R**2)
+
+def SimpleSphericalSector(theta,phi,R,power = 80, VHPBW = 8.5, AHPBW = 85, L = 2.25, G = 17,Globe = 0, y = 0):
+    G = 10**(G/10)
+    Globe = 10**(Globe/10)
+    VHPBW *= np.pi/180
+    AHPBW *= np.pi/180
+    b1 = (2*(theta - y - np.pi/2)/VHPBW)**2
+    b2 = (2*phi/AHPBW)**2
+    Gphitheta = Globe + G*2**(-b1-b2)
+    return power*Gphitheta/(4*np.pi*R**2)
+
+
+def AverageCylindricalOmni(R, power = 80, VHPBW = 8.5, AHPBW = 85,G = 17, L =2.25, y = 0 ):
+    G = 10**(G/10)
+    VHPBW *= np.pi/180
+    AHPBW *= np.pi/180
+    ry = R/np.cos(y)
+    ro = G*L*np.cos(y)**2/2
+    return  power/(2*np.pi*ry*L*np.cos(y)**2*np.sqrt(1 + (ry/ro)**2))
+
+def PeakCylindricalOmni(R, power = 80, L = 2.25, G = 17, y = 0):
+    G = 10**(G/10)
+    VHPBW *= np.pi/180
+    AHPBW *= np.pi/180
+    ry = R/np.cos(y)
+    ro = G*L*np.cos(y)**2/2
+    return  power/(np.pi*ry*L*np.cos(y)**2*np.sqrt(1 + (2*ry/ro)**2))
+
+def SimpleSphericalOmni(theta,R,power = 80, VHPBW = 8.5, AHPBW = 85, L = 2.25, G = 17,Globe = -3.6, y = 0):
+    G = 10**(G/10)
+    Globe = 10**(Globe/10)
+    VHPBW *= np.pi/180
+    AHPBW *= np.pi/180
+    b1 = (2*(theta - y - np.pi/2)/VHPBW)**2
+    Gphitheta = Globe + G*2**(-b1)
+    return power*Gphitheta/(4*np.pi*R**2)
+
+def AdjustedSphericalOmni(theta,R,power = 80, VHPBW = 8.5, AHPBW = 85, L = 2.25, G = 17,Globe = -3.6, y = 0):
+    G = 10**(G/10)
+    Globe = 10**(Globe/10)
+    VHPBW *= np.pi/180
+    AHPBW *= np.pi/180
+    b1 = (theta - y - np.pi/2)/VHPBW
+    Gphitheta = 1.26*Globe + G*2**(-b1**2)
+    return power*Gphitheta/(4*np.pi*R**2)
+
+def Classical(E):
+    S = []
+    for i in range(len(E)):
+        S.append(E[i]**2/377)
+    return np.array(S)
+
+def OET65Equation3_Dynamic(R,G,power = 80):
+    return [power*10**(g/10)/(4*np.pi*r**2) for g,r in zip(G,R)]
+
+def CylindricalValidationTest():
+    SectorCoverageSbar = [5.58, 3.54, 2.49, 1.86, 1.43, 1.02, 0.639]
+    SectorCoverageS = [9.96, 5.74, 3.70, 2.56, 1.86, 1.25, 0.727]
+    f = 925
+    lamda = (3*10**8)/(f*10**6)
+    power = 80
+    L = 2.158
+    AHPBW = 84
+    y = 5
+    Gs = 17 #dBi
+    Go = 11 #dBi
+    Globe = -9      #dBi
+    Globe = -3.6    #dBi
+    phi = np.pi/12
+    Ry = [4, 6, 8, 10, 12, 15, 20]
+    R = [ry*np.cos(y*np.pi/180) for ry in Ry]
+
+    SectorAverage = AverageCylindricalSector(phi,R,power,AHPBW, L,Gs, y*np.pi/180,Ry)
+    SectorPeak = PeakCylindricalSector(phi,R,power,AHPBW, L, Gs, y=y*np.pi/180)
+
+    plt.figure()
+    plt.plot(Ry,SectorAverage,label = 'SpacialPeakCylindrical')
+    plt.plot(Ry,SectorCoverageS,label = 'Peak Cylindrical Validation line')
+    plt.plot(Ry,SectorCoverageSbar,label = 'Average Cylindrical Validation line')
+    plt.plot(Ry,SectorPeak,label = 'SpacialAverageCylindrical')
+    plt.legend()
+    plt.show()
+
+
+def SphericalValidationTest():
+    adjustedSectorS = [52, 353, 313, 210, 141, 98.6, 72, 54.5 ]
+    adjustedSectorS = [a/1000 for a in adjustedSectorS]
+    SectorCoverageS = [9.96, 5.74, 3.70, 2.56, 1.86, 1.25, 0.727]
+    f = 925
+    lamda = (3*10**8)/(f*10**6)
+    power = 80
+    L = 2.158
+    Gs = 17 #dBi
+    Go = 11 #dBi
+    Globes = -3.6     #dBi
+    Globe0 = -9   #dBi
+    phi = np.pi/12
+    Ry = np.linspace(10,80,8)
+    R = [np.sqrt(ry**2 + 5**2) for ry in Ry]
+    R = np.array(R)
+    theta = [np.pi/2 + np.arctan(5/ry) for ry in Ry]
+    theta = np.array(theta)
+    Ry = np.array(Ry)
+
+    adjustedSpherical = AdjustedSphericalSector(theta = theta, phi=phi, R = Ry,power = power, VHPBW=8, AHPBW=84, L = L, G=Gs, Globe=Globes, y =5*np.pi/180 )
+    plt.figure()
+    plt.plot(Ry,adjustedSpherical,label = 'SpacialPeakCylindrical')
+    plt.plot(Ry,adjustedSectorS,label = 'Adjusted Spherical Validation line')
+    #plt.plot(Ry,SectorCoverageSbar,label = 'Average Cylindrical Validation line')
+    #plt.plot(Ry,SectorPeak,label = 'SpacialAverageCylindrical')
+    plt.legend()
+    plt.show()
+
+
+
+##Near field
+def getEfficiency(G = 17, f = 900,A = 2.25*0.3):
+    lamda = 3*10**8/(f*10**6)
+    #return (10**(G/10)*lamda**2)/(4*np.pi*A)
+
+    top = 10**(G/10)*lamda**2/(4*np.pi)
+    bottom =  np.pi*2.25**2/4#np.pi*2.25**2/4
+    return top/bottom
+
+def Ssurface(P = 80, A = 2.25*0.3):
+    return 4*P/A
+
+def Snf(G = 17, f = 900,w = 0.3,D = 2.25,power = 80):
+    A = w*D
+    n = getEfficiency(G, f, A)
+    return 16*n*power/(np.pi*D**2)
+
+def St(R):
+    return Snf()*Rnf()/R
+
+
+def Rnf(D = 2.25, f = 900):
+    lamda = 3*10**8/(f*10**6)
+    return D**2/(4*lamda)
+
+def Rff(D = 2.25,f = 900):
+    lamda = 3*10**8/(f*10**6)
+    return 0.6*D**2/lamda
+
+def Sff(R, power = 80, G = 17):
+    return power*10**(G/10)/(4*np.pi*R**2) 
+
+def OET65near(R, power = 80, D = 2.25, AHPBW = 85):
+    return power*180/(R*D*AHPBW*np.pi)
+
+
+def OET65far(R,power = 80, G = 17):
+    G = 10**(G/10)
+    return power*G/(4*np.pi*R**2)
+
+def OET65Modified(D = 2.25):
+    Rtrans = D*1.5
+    Rfar = Rff()
+    return OET65near(Rtrans)*1/(Rfar/Rtrans)**2
+
+
+def ICNIRPmeshPeak(R, phi, theta, f = 900, D = 2.25):
+    lamda = 3*10**8/(f*10**6)
+    Rreactive = 0.62*np.sqrt(D**3/lamda)
+    Rnearfield = 2*D**2/lamda
+    S = []
+    for i in range(len(R)):
+        if np.abs(R[i]) < Rnearfield:
+            S.append(PeakCylindricalSector(phi[i],R[i]))
+        elif np.abs(R[i]) > Rnearfield:
+            S.append(AdjustedSphericalSector(theta[i], phi[i], R[i]))
+    return np.array(S)
+
+def ICNIRPmeshAverage(R, phi, theta, f = 900, D = 2.25):
+    lamda = 3*10**8/(f*10**6)
+    Rreactive = 0.62*np.sqrt(D**3/lamda)
+    Rnearfield = 2*D**2/lamda
+    S = []
+    for i in range(len(R)):
+        if np.abs(R[i]) < Rnearfield:
+            S.append(AverageCylindricalSector(phi[i],R[i]))
+        elif np.abs(R[i]) > Rnearfield:
+            S.append(SimpleSphericalSector(theta[i], phi[i], R[i]))
+    return np.array(S)
+
+def OET65mesh1(R, D = 2.25, f = 900):
+    lamda = 3*10**8/(f*10**6)
+    Rreactive = 0.62*np.sqrt(D**3/lamda)
+    Rnearfield = 2*D**2/lamda
+    S =[]
+    for i in range(len(R)):
+        if R[i] < Rnearfield:
+            S.append(OET65near(R[i]))
+        elif R[i] > Rnearfield:
+            S.append(OET65far(R[i]))
+    return np.array(S)
+    
+
+def OET65mesh2(R, f = 900,D = 2.25, a = True):
+    lamda = 3*10**8/(f*10**6)
+    Rreactive = 0.62*np.sqrt(D**3/lamda)
+    Rnearfield = 2*D**2/lamda
+    S = []
+    if (a == True):
+        for i in range(len(R)):
+            if R[i] < 0.5:
+                S.append(Ssurface())
+            elif np.abs(R[i]) < Rnf():
+                S.append(Snf())
+            elif np.abs(R[i]) > Rff():
+                S.append(Sff(R[i]))
+            else:
+                S.append(St(R[i]))
+        return np.array(S)
+    else:
+        for i in range(len(R)):
+            if np.abs(R[i]) < Rnearfield:
+                S.append(Snf())
+            elif np.abs(R[i]) > Rnearfield:
+                S.append(Sff(R[i]))
+            else:
+                S.append(St(R[i]))
+        return np.array(S)
 
