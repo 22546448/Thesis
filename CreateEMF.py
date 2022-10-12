@@ -1,9 +1,8 @@
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
-from pandas import HDFStore
-import math
-from Field import Field
+from pandas import *
+from Field import *
 import mayavi.mlab as mlab
 from mayavi.mlab import *
 
@@ -12,35 +11,36 @@ import warnings
 from tables import NaturalNameWarning
 warnings.filterwarnings('ignore', category=NaturalNameWarning)
 
-class Antenna:
-    def __init__(self,P,G,f,x=0,y=0,z=0):
-        self.x = x
-        self.y = y
-        self.z = z
-        self.P = P
-        self.G = G
-        self.f = f
 
-class Surface:
-    def __init__(self,xMin,xStep,xMax,yMin,yStep,yMax,z=0): 
+class AntennaSurface:
+    def __init__(self,xMin,xMax, xStep,yMin,yMax ,yStep, zMin, zMax ,zStep,P = 80, f = 900): 
         self.xMin = xMin
         self.xMax = xMax
         self.xStep = xStep
         self.yMin = yMin
         self.yMax = yMax
         self.yStep = yStep   
+        self.zMin = zMin
+        self.zMax = zMax
+        self.zStep = zStep   
+        self.P = P
+        self.f = f
 
-        x = np.linspace(xMin,xMax,xStep)
-        y = np.linspace(yMin,yMax,yStep)
-        xv,yv= np.meshgrid(x,y)
-        
-        self.df = pd.DataFrame({
-            'X':xv.ravel(),
-            'Y':yv.ravel(),
-            'Z':z
-        })
-        self.xMesh,self.yMesh = np.mgrid[xMin:xMax:(xStep*1j) , yMin:yMax:(yStep*1j)]
-        self.df = self.df.astype(float)
+    xrange = np.arange(0.1, 20, 2)
+    yrange = np.arange(-20, 20, 2)
+    zrange = np.arange(-20, 20, 2)
+    x,y,z = np.meshgrid(xrange, yrange, zrange)
+
+    data = np.array([x,y,z]).reshape(3,-1).T
+    df = pd.DataFrame(data,columns=['X','Y','Z'])
+
+    df['R'] = np.sqrt(df['X']**2 + df['Y']**2 + df['Z']**2)
+    df['phi'] = np.arccos(df['X']/df['R'])
+    df['theta'] = np.arccos(df['Z']/df['R'])
+    df['Gain'] = GetGain(df['phi'],df['theta'])
+    df['ICNIRP'] = ICNIRPmeshAverage(df['phi'], df['R'],df['theta'], f = )
+    df['']
+            
 
 class Field(Field):
     def __init__(self,antenna,space,spaceMin = 3,sMax = 10):
