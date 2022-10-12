@@ -38,7 +38,7 @@ class AntennaSurface:
     df['phi'] = np.arccos(df['X']/df['R'])
     df['theta'] = np.arccos(df['Z']/df['R'])
     df['Gain'] = GetGain(df['phi'],df['theta'])
-    df['ICNIRP'] = ICNIRPmeshAverage(df['phi'], df['R'],df['theta'], f = )
+    df['ICNIRP'] = ICNIRPmeshAverage(df['phi'], df['R'],df['theta'], f = 900)
     df['']
             
 
