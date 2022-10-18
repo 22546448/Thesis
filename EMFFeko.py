@@ -64,37 +64,6 @@ class Fekofield(Field):
 
 
 def Validationtest1():
-    ff = GetFarField('test1.ffe')
-
-    #line1
-    line1G = ff.loc[(ff['phi'] == 0) & (ff['theta'] == 90),'Gain'].to_numpy()
-    line1G = [line1G for i in range(8)]
-    R = np.linspace(0.5,4,8)
-    line1S = OET65Equation3_Dynamic(R,line1G)
-    
-    #line2
-    line2 = ff.loc[(ff['phi'] < 181) & (ff['theta'] == 90)]
-    x = 1
-    Y = np.linspace(-1.4,1.4,15)
-    R = [np.sqrt(y**2 + x**2) for y in Y]
-    angle = [np.abs(np.round(np.arccos(x/r)*180/np.pi)) for r in R]
-    line2G = []
-    for a in angle:
-        line2G.append(line2.loc[line2['phi'] == a,'Gain'].to_numpy()[0])
-    line2S = OET65Equation3_Dynamic(R,line2G)
-
-
-    line3 = ff.loc[ff['phi'] == 0]
-    Z = np.linspace(-1.4,1.4,15)
-    x = 0.1
-    R = [np.sqrt(z**2 + x**2) for z in Z]
-    angle = [np.round(np.abs(np.arcsin(x/r)*180/np.pi)) for r in R]
-    line3G = []
-    for a in angle:
-        line3G.append(line3.loc[line3['theta'] == a,'Gain'].to_numpy()[0])
-    line3S = OET65Equation3_Dynamic(R,line3G)
-    
-
 
     FCCoccupational = 30#getZone(900,'FCC')[1]
     l1 = [65.8, 39.4, 25, 13.4, 10.7, 10.4, 10.1, 9.44]
@@ -106,40 +75,86 @@ def Validationtest1():
     IXUS3_persentage_occupation = [3.623, 24.51, 595, 273.1, 508.7, 682.9, 869.8, 1279, 886.2, 683.6, 505.8, 267.4, 594.2, 24.24, 3.706]
 
     def Doline(*lines):
-        
+        i = 0
         for line in lines:
-            plt.figure()
-            #plt.plot(line['1D'], line['l'],label = 'Validation line')
-            #plt.plot(line['1D'], line['IXUS'],label = 'IXUS')
-            #plt.plot(line['1D'], line['Classical'], label = 'Classical')
-            #plt.plot(line['1D'],line['OET65Equation3_Dynamic'],label = 'OET65Equation3_Dynamic')
-           # plt.plot(line['1D'],line['OET65Equation3_Static'],label = 'OET65Equation3_Static')
-            plt.plot(line['1D'], line['Full wave'], label = 'Full wave')
-            plt.plot(line['1D'], line['OET65'], label = 'OET65')
-            #plt.plot(line['1D'], line['ICNIRP Peak'], label = 'IEC Peak')
-            plt.plot(line['1D'], line['IEC Average'], label = 'IEC Average')
-            #plt.plot(line['1D'], line['Peak Cylindrical'], label = 'Peak Cylindrical')
-            #plt.plot(line['1D'], line['Average Cylindrical'], label = 'Average Cylindrical')
-            #plt.plot(line['1D'], line['Adjusted Spherical'], label = 'Adjusted Spherical')
-            #plt.plot(line['1D'], line['Simple Spherical'], label = 'Simple Spherical')
-            plt.legend()
+            figure, axis = plt.subplots(2)
+            axis[0].plot(line['1D'], line['l'],'k-',label = 'IEC Full wave refernce results')
+            axis[0].plot(line['1D'], line['IXUS'],'k--',label = 'IXUS')
+            axis[0].plot(line['1D'], line['Classical'],'k:', label = 'S=|E|^2/377')
+            axis[0].plot(line['1D'], line['Full wave'],'k-.', label = 'S=ExH')
+            axis[0].plot(line['1D'], line['OET65'],'k_', label = 'FCC OET 65')
+            axis[0].plot(line['1D'], line['IEC Peak'],'ko', label = 'IEC Peak Estimation')
+            axis[0].plot(line['1D'], line['EMSS Peak'],'k*', label = 'EMSS Peak Estimation')
+            line = line.drop(columns = ['R','Re(Ex)','Im(Ex)','Re(Ey)','Im(Ey)','Re(Ez)','Im(Ez)','Re(Hx)','Im(Hx)','Re(Hy)','Im(Hy)','Re(Hz)','Im(Hz)','Ex','Ey','Ez','Hx','Hy','Hz','|E|','Sx','Sy','Sz','|Ex|','|Ey|','|Ez|'])
+            #plt.plot(line['1D'], line['IEC Average'], label = 'IEC Average')
+            axis[1].plot(line['1D'], line['IXUS']/line['l']*100,'k--',label = 'IXUS')
+            axis[1].plot(line['1D'], line['Classical']/line['l']*100,'k:', label = 'S=|E|^2/377')
+            axis[1].plot(line['1D'], line['Full wave']/line['l']*100,'k-.', label = 'S=ExH')
+            axis[1].plot(line['1D'], line['OET65']/line['l']*100,'k_', label = 'FCC OET 65')
+            axis[1].plot(line['1D'], line['IEC Peak']/line['l']*100,'ko', label = 'IEC Peak Estimation')
+            axis[1].plot(line['1D'], line['EMSS Peak']/line['l']*100,'k*', label = 'EMSS Peak Estimation')
+
+            if i ==0:
+                axis[0].set_title('Validation test for line 1')
+                axis[0].set_xlabel('x(m)') 
+                axis[0].set_ylabel('S(W/m^2)')
+                axis[1].set_title('Percentage of reference results for line 1')
+                axis[1].set_xlabel('x(m)')
+                axis[1].set_ylabel('Percentage of IEC reference results')
+                #print(np.corrcoef(line['l'], line['Full wave'])[0,1])
+                #print(np.corrcoef(line['l'], line['Classical'])[0,1])            
+                #print(np.corrcoef(line['l'], line['IXUS'])[0,1])            
+                #print(np.corrcoef(line['l'], line['OET65'])[0,1])            
+                #print(np.corrcoef(line['l'], line['IEC Peak'])[0,1])   
+                #print(np.corrcoef(line['l'], line['EMSS Peak'])[0,1])  
+
+                print(np.max(np.abs(line['l'] - line['Full wave'])))
+                print(np.max(np.abs(line['l'] - line['Classical'])))
+                print(np.max(np.abs(line['l'] - line['IXUS'])))
+                print(np.max(np.abs(line['l'] - line['OET65'])))
+                print(np.max(np.abs(line['l'] - line['IEC Peak'])))
+                print(np.max(np.abs(line['l'] - line['EMSS Peak'])))
+
+            if i ==1:
+                axis[0].set_title('Validation test for line 2')
+                axis[0].set_xlabel('y(m)')
+                axis[0].set_ylabel('S(W/m^2)')
+                axis[1].set_title('Percentage of reference results for line 2')
+                axis[1].set_xlabel('y(m)')
+                axis[1].set_ylabel('Percentage of IEC reference results')
+                
+            if i ==2:
+                axis[0].set_title('Validation test for line 3')
+                axis[0].set_xlabel('z(m)')
+                axis[0].set_ylabel('S(W/m^2)')
+                axis[1].set_title('Percentage of reference results for line 3')
+                axis[1].set_xlabel('z(m)')
+                axis[1].set_ylabel('Percentage of IEC reference results')
+            i+=1
+            figure.legend(axis[0].get_legend_handles_labels()[0],axis[0].get_legend_handles_labels()[1])
+            figure.tight_layout()
+        plt.show()
+
+
+
+
+
 
 
     line1 = GetField('IEC-62232-panel-antenna (4)_Line1.efe','IEC-62232-panel-antenna (4)_Line1.hfe',compress=False, power=80).df
     line1['IXUS'] = [x/100*FCCoccupational for x in IXUS1_persentage_occupation]
-    #line1['l'] = l1
+    line1['l'] = l1
 
     line2 = GetField('IEC-62232-panel-antenna (4)_Line2.efe','IEC-62232-panel-antenna (4)_Line2.hfe',compress=False, power=80).df
     line2['IXUS'] = [x/100*FCCoccupational for x in IXUS2_persentage_occupation]
-    #line2['l'] = l2
+    line2['l'] = l2
 
     line3 = GetField('IEC-62232-panel-antenna (4)_Line3.efe','IEC-62232-panel-antenna (4)_Line3.hfe',compress=False, power=80).df
     line3['IXUS'] = [x/100*FCCoccupational for x in IXUS3_persentage_occupation]
-    #line3['l'] = l3
+    line3['l'] = l3
 
     Doline(line1.rename(columns = {'X': '1D'}), line2.rename(columns = {'Y': '1D'}),line3.rename(columns = {'Z': '1D'}))
     
-    plt.show()
 
 
 
@@ -180,7 +195,7 @@ def GetField(filenameE,filenameH,S = 'S(E)',compress = False ,standard = 'FCC',p
         df['R'] = np.sqrt(df['X']**2 + df['Y']**2 + df['Z']**2)
         df['phi'] = np.arctan(df['Y']/df['X'])
         df['theta'] = np.arctan(df['X']/df['Z'])
-        dfG = GetFarField('test1.ffe')
+        dfG = GetFarField('IEC-62232-panel-antenna (4)_FarField1.ffe')
         phi = df['phi']
         theta = df['theta']
         df['phi'] = np.abs(np.round(df['phi']*180/np.pi))
@@ -227,9 +242,10 @@ def GetField(filenameE,filenameH,S = 'S(E)',compress = False ,standard = 'FCC',p
     df['Full wave'] = np.sqrt(np.absolute(df['Sx'])**2 + np.absolute(df['Sy'])**2 + np.absolute(df['Sz'])**2)
     df['Classical'] = Classical(df['|E|'].to_numpy())
     df['OET65'] = OET65mesh(df['R'],df['Gain'])
-    #df['OET651'] = OET65mesh2(df['R'])
-    df['IEC Peak'] = ICNIRPmeshPeak(df['R'], df['phi'], df['theta'])
-    df['IEC Average'] = ICNIRPmeshAverage(df['R'], df['phi'], df['theta'])
+    df['IEC Peak'] = IECmeshPeakSector(df['R'], df['phi'], df['theta'])
+    df['IEC Average'] = IECmeshAverageSector(df['R'], df['phi'], df['theta'])
+    df['EMSS Peak'] = EMSSmeshPeakSector(df['R'], df['phi'], df['theta'])
+    df['EMSS Average'] = EMSSmeshAverageSector(df['R'], df['phi'], df['theta'])
 
     df['S'] = df['Full wave']
     if compress:

@@ -220,16 +220,6 @@ def plotFarField(df):
     mlab.mesh(x, y, z)
     mlab.show()
 
-def GetGain(phi,theta, filename = "IEC-62232-panel-antenna_FarField1.ffe"):
-    FarField = GetFarField(filename,False)[['Theta','Phi','Directivity(Total)']]
-    #FarField_Grouped = FarField.groupby()
-    gain = []
-    for i in range(len(phi)): 
-        p = np.round(theta[i]*180/(2*np.pi))
-        t =np.round(phi[i]*180/(2*np.pi))
-        gain.append(FarField.loc[(FarField['Theta'] == p) & (FarField['Phi'] ==  t),'Directivity(Total)'].to_numpy()[0])   
-    return np.array(gain)
-
 
 def test_mesh(df,error = 1,S = 10):
 
@@ -390,12 +380,9 @@ def Classical(E):
         S.append(E[i]**2/377)
     return np.array(S)
 
-def OET65Equation3_Dynamic(R,G,power = 80):
-    return [power*10**(g/10)/(4*np.pi*r**2) for g,r in zip(G,R)]
-
 def CylindricalValidationTest():
-    SectorCoverageSbar = [5.58, 3.54, 2.49, 1.86, 1.43, 1.02, 0.639]
-    SectorCoverageS = [9.96, 5.74, 3.70, 2.56, 1.86, 1.25, 0.727]
+    SectorSpacialAverage = [5.58, 3.54, 2.49, 1.86, 1.43, 1.02, 0.639]
+    SectorSpacialPeak = [9.96, 5.74, 3.70, 2.56, 1.86, 1.25, 0.727]
     f = 925
     lamda = (3*10**8)/(f*10**6)
     power = 80
@@ -410,14 +397,19 @@ def CylindricalValidationTest():
     Ry = [4, 6, 8, 10, 12, 15, 20]
     R = [ry*np.cos(y*np.pi/180) for ry in Ry]
 
-    SectorAverage = AverageCylindricalSector(phi,R,power,AHPBW, L,Gs, y*np.pi/180,Ry)
-    SectorPeak = PeakCylindricalSector(phi,R,power,AHPBW, L, Gs, y=y*np.pi/180)
+    IECSectorAverage= AverageCylindricalSector(phi,R,power,AHPBW, L,Gs, y*np.pi/180,Ry)
+    IECSectorPeak = PeakCylindricalSector(phi,R,power,AHPBW, L, Gs, y=y*np.pi/180)
 
     plt.figure()
-    plt.plot(Ry,SectorAverage,label = 'SpacialPeakCylindrical')
-    plt.plot(Ry,SectorCoverageS,label = 'Peak Cylindrical Validation line')
-    plt.plot(Ry,SectorCoverageSbar,label = 'Average Cylindrical Validation line')
-    plt.plot(Ry,SectorPeak,label = 'SpacialAverageCylindrical')
+    plt.plot(Ry,IECSectorAverage,'k--',label = 'IEC Average Estimation')
+    plt.plot(Ry,IECSectorAverage,'k*',label = 'EMSS Average Estimation')
+    plt.plot(Ry,SectorSpacialAverage,'k:',label = 'Sector-coverage Spacial-average reference results')
+    plt.legend()
+
+    plt.figure()
+    plt.plot(Ry,IECSectorPeak,'k-.',label = 'IEC Peak Estimation')
+    plt.plot(Ry,IECSectorPeak,'k:',label = 'EMSS Peak Estimation')
+    plt.plot(Ry,SectorSpacialPeak,'k:',label = 'Sector-coverage Spacial-peak reference results')
     plt.legend()
     plt.show()
 
@@ -486,7 +478,8 @@ def Sff(R, power = 80, G = 17):
     return power*10**(G/10)/(4*np.pi*R**2) 
 
 def OET65near(R, power = 80, D = 2.25, AHPBW = 85):
-    return power*180/(R*D*AHPBW*np.pi)
+    AHPBW *=np.pi/180
+    return power/(R*D*AHPBW)
 
 
 def OET65far(R,G,power = 80):
@@ -497,31 +490,6 @@ def OET65Modified(D = 2.25):
     Rtrans = D*1.5
     Rfar = Rff()
     return OET65near(Rtrans)*1/(Rfar/Rtrans)**2
-
-
-def ICNIRPmeshPeak(R, phi, theta, f = 900, D = 2.25):
-    lamda = 3*10**8/(f*10**6)
-    Rreactive = 0.62*np.sqrt(D**3/lamda)
-    Rnearfield = 2*D**2/lamda
-    S = []
-    for i in range(len(R)):
-        if np.abs(R[i]) < Rnearfield:
-            S.append(PeakCylindricalSector(phi[i],R[i]))
-        elif np.abs(R[i]) > Rnearfield:
-            S.append(AdjustedSphericalSector(theta[i], phi[i], R[i]))
-    return np.array(S)
-
-def ICNIRPmeshAverage(R, phi, theta, f = 900, D = 2.25):
-    lamda = 3*10**8/(f*10**6)
-    Rreactive = 0.62*np.sqrt(D**3/lamda)
-    Rnearfield = 2*D**2/lamda
-    S = []
-    for i in range(len(R)):
-        if np.abs(R[i]) < Rnearfield:
-            S.append(AverageCylindricalSector(phi[i],R[i]))
-        elif np.abs(R[i]) > Rnearfield:
-            S.append(SimpleSphericalSector(theta[i], phi[i], R[i]))
-    return np.array(S)
 
 def OET65mesh(R, G, D = 2.25, f = 900):
     lamda = 3*10**8/(f*10**6)
@@ -562,3 +530,72 @@ def OET65mesh2(R, f = 900,D = 2.25, a = True):
                 S.append(St(R[i]))
         return np.array(S)
 
+def IECSpatialPeakSectorBasic(R, power = 80, D = 2.25, AHPBW = 85):
+    AHPBW *=np.pi/180
+    return 2*power/(R*D*AHPBW)
+
+def IECSpatialPeakOmniBasic(R, power = 80, D = 2.25):
+    AHPBW *=np.pi/180
+    return power/(R*D*np.pi)
+
+def IECSpatialAverageSectorBasic(R, power = 80, D = 2.25, AHPBW = 85):
+    AHPBW *=np.pi/180
+    return power/(R*D*AHPBW)
+
+def IECSpatialAverageOmniBasic(R, power = 80, D = 2.25):
+    AHPBW *=np.pi/180
+    return power/(R*D*2*np.pi)
+
+
+def IECmeshPeakSector(R, phi, theta, f = 900, D = 2.25):
+    lamda = 3*10**8/(f*10**6)
+    Rnearfield = 2*D**2/lamda
+    S = []
+    for i in range(len(R)):
+        if np.abs(R[i]) < Rnearfield:
+            if np.abs(phi[i]) < np.pi/2 and np.abs(R[i]*np.cos(theta[i])) < D/2 :
+                S.append(PeakCylindricalSector(phi[i],R[i]))
+            else:
+                S.append(AdjustedSphericalSector(theta[i], phi[i], R[i]))
+        elif np.abs(R[i]) > Rnearfield:
+            S.append(IECSpatialPeakSectorBasic(R))  
+    return np.array(S)
+
+def IECmeshAverageSector(R, phi, theta, f = 900, D = 2.25):
+    lamda = 3*10**8/(f*10**6)
+    Rnearfield = 2*D**2/lamda
+    S = []
+    for i in range(len(R)):
+        if np.abs(R[i]) < Rnearfield:
+            if np.abs(phi[i]) < np.pi/2:
+                S.append(AverageCylindricalSector(phi[i],R[i]))
+            else:
+                S.append(AdjustedSphericalSector(theta[i], phi[i], R[i]))
+        elif np.abs(R[i]) > Rnearfield:
+            S.append(IECSpatialAverageSectorBasic(R))  
+    return np.array(S)
+
+def EMSSmeshPeakSector(R, phi, theta, f = 900, D = 2.25):
+    lamda = 3*10**8/(f*10**6)
+    Rnearfield = 2*D**2/lamda
+    S = []
+    for i in range(len(R)):
+        if np.abs(R[i]) < Rnearfield:
+            if np.abs(phi[i]) < np.pi/2:
+                S.append(PeakCylindricalSector(phi[i],R[i]))
+            else:
+                S.append(AdjustedSphericalSector(theta[i], phi[i], R[i]))
+        elif np.abs(R[i]) > Rnearfield:
+            S.append(SimpleSphericalSector(theta[i], phi[i], R[i]))   
+    return np.array(S)
+
+def EMSSmeshAverageSector(R, phi, theta, f = 900, D = 2.25):
+    lamda = 3*10**8/(f*10**6)
+    Rnearfield = 2*D**2/lamda
+    S = []
+    for i in range(len(R)):
+        if np.abs(R[i]) < Rnearfield:
+            S.append(AverageCylindricalSector(phi[i],R[i]))
+        elif np.abs(R[i]) > Rnearfield:
+            S.append(SimpleSphericalSector(theta[i], phi[i], R[i]))
+    return np.array(S)
