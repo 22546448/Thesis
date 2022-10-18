@@ -67,31 +67,31 @@ def Validationtest1():
     ff = GetFarField('test1.ffe')
 
     #line1
-    line1G = ff.loc[(ff['Phi'] == 0) & (ff['Theta'] == 90),'Directivity(Total)'].to_numpy()
-    line1G = [line1G for i in range(80)]
+    line1G = ff.loc[(ff['phi'] == 0) & (ff['theta'] == 90),'Gain'].to_numpy()
+    line1G = [line1G for i in range(8)]
     R = np.linspace(0.5,4,8)
     line1S = OET65Equation3_Dynamic(R,line1G)
     
     #line2
-    line2 = ff.loc[(ff['Phi'] < 181) & (ff['Theta'] == 90)]
+    line2 = ff.loc[(ff['phi'] < 181) & (ff['theta'] == 90)]
     x = 1
-    Y = np.linspace(-40,40,401)
+    Y = np.linspace(-1.4,1.4,15)
     R = [np.sqrt(y**2 + x**2) for y in Y]
     angle = [np.abs(np.round(np.arccos(x/r)*180/np.pi)) for r in R]
     line2G = []
     for a in angle:
-        line2G.append(line2.loc[line2['Phi'] == a,'Directivity(Total)'].to_numpy()[0])
+        line2G.append(line2.loc[line2['phi'] == a,'Gain'].to_numpy()[0])
     line2S = OET65Equation3_Dynamic(R,line2G)
 
 
-    line3 = ff.loc[ff['Phi'] == 0]
-    Z = np.linspace(-40,40,401)
+    line3 = ff.loc[ff['phi'] == 0]
+    Z = np.linspace(-1.4,1.4,15)
     x = 0.1
     R = [np.sqrt(z**2 + x**2) for z in Z]
     angle = [np.round(np.abs(np.arcsin(x/r)*180/np.pi)) for r in R]
     line3G = []
     for a in angle:
-        line3G.append(line3.loc[line3['Theta'] == a,'Directivity(Total)'].to_numpy()[0])
+        line3G.append(line3.loc[line3['theta'] == a,'Gain'].to_numpy()[0])
     line3S = OET65Equation3_Dynamic(R,line3G)
     
 
@@ -115,10 +115,9 @@ def Validationtest1():
             #plt.plot(line['1D'],line['OET65Equation3_Dynamic'],label = 'OET65Equation3_Dynamic')
            # plt.plot(line['1D'],line['OET65Equation3_Static'],label = 'OET65Equation3_Static')
             plt.plot(line['1D'], line['Full wave'], label = 'Full wave')
-            plt.plot(line['1D'], line['OET651'], label = 'OET651')
-            plt.plot(line['1D'], line['OET652'], label = 'OET652')
-            plt.plot(line['1D'], line['ICNIRP Peak'], label = 'ICNIRP Peak')
-            plt.plot(line['1D'], line['ICNIRP Average'], label = 'ICNIRP Average')
+            plt.plot(line['1D'], line['OET65'], label = 'OET65')
+            #plt.plot(line['1D'], line['ICNIRP Peak'], label = 'IEC Peak')
+            plt.plot(line['1D'], line['IEC Average'], label = 'IEC Average')
             #plt.plot(line['1D'], line['Peak Cylindrical'], label = 'Peak Cylindrical')
             #plt.plot(line['1D'], line['Average Cylindrical'], label = 'Average Cylindrical')
             #plt.plot(line['1D'], line['Adjusted Spherical'], label = 'Adjusted Spherical')
@@ -127,18 +126,15 @@ def Validationtest1():
 
 
     line1 = GetField('IEC-62232-panel-antenna (4)_Line1.efe','IEC-62232-panel-antenna (4)_Line1.hfe',compress=False, power=80).df
-    #line1 = line1.loc[line1['X'] < 4.1]
-    #line1['IXUS'] = [x/100*FCCoccupational for x in IXUS1_persentage_occupation]
+    line1['IXUS'] = [x/100*FCCoccupational for x in IXUS1_persentage_occupation]
     #line1['l'] = l1
 
     line2 = GetField('IEC-62232-panel-antenna (4)_Line2.efe','IEC-62232-panel-antenna (4)_Line2.hfe',compress=False, power=80).df
-   # line2 = line2.loc[(line2['Y'] < 5) & (line2['Y'] > -5)]
-    #line2['IXUS'] = [x/100*FCCoccupational for x in IXUS2_persentage_occupation]
+    line2['IXUS'] = [x/100*FCCoccupational for x in IXUS2_persentage_occupation]
     #line2['l'] = l2
 
     line3 = GetField('IEC-62232-panel-antenna (4)_Line3.efe','IEC-62232-panel-antenna (4)_Line3.hfe',compress=False, power=80).df
-    #line3 = line3.loc[(line3['Z'] < 5) & (line3['Z'] > -5)]
-    #line3['IXUS'] = [x/100*FCCoccupational for x in IXUS3_persentage_occupation]
+    line3['IXUS'] = [x/100*FCCoccupational for x in IXUS3_persentage_occupation]
     #line3['l'] = l3
 
     Doline(line1.rename(columns = {'X': '1D'}), line2.rename(columns = {'Y': '1D'}),line3.rename(columns = {'Z': '1D'}))
@@ -184,6 +180,14 @@ def GetField(filenameE,filenameH,S = 'S(E)',compress = False ,standard = 'FCC',p
         df['R'] = np.sqrt(df['X']**2 + df['Y']**2 + df['Z']**2)
         df['phi'] = np.arctan(df['Y']/df['X'])
         df['theta'] = np.arctan(df['X']/df['Z'])
+        dfG = GetFarField('test1.ffe')
+        phi = df['phi']
+        theta = df['theta']
+        df['phi'] = np.abs(np.round(df['phi']*180/np.pi))
+        df['theta'] = np.abs(np.round(df['theta']*180/np.pi))
+        df = df.merge(dfG,how='left',on=['phi','theta'])
+        df['phi'] = phi
+        df['theta'] = theta
     file.close()
 
     with open(filenameH, 'r') as file:
@@ -222,10 +226,10 @@ def GetField(filenameE,filenameH,S = 'S(E)',compress = False ,standard = 'FCC',p
 
     df['Full wave'] = np.sqrt(np.absolute(df['Sx'])**2 + np.absolute(df['Sy'])**2 + np.absolute(df['Sz'])**2)
     df['Classical'] = Classical(df['|E|'].to_numpy())
-    df['OET65'] = OET65mesh1(df['R'])
+    df['OET65'] = OET65mesh(df['R'],df['Gain'])
     #df['OET651'] = OET65mesh2(df['R'])
-    df['ICNIRP Peak'] = ICNIRPmeshPeak(df['R'], df['phi'], df['theta'])
-    df['ICNIRP Average'] = ICNIRPmeshAverage(df['R'], df['phi'], df['theta'])
+    df['IEC Peak'] = ICNIRPmeshPeak(df['R'], df['phi'], df['theta'])
+    df['IEC Average'] = ICNIRPmeshAverage(df['R'], df['phi'], df['theta'])
 
     df['S'] = df['Full wave']
     if compress:

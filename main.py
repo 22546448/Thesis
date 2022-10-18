@@ -11,7 +11,7 @@ import time
 import mayavi.mlab as mlab
 
 
-
+Validationtest1()
 
 
 

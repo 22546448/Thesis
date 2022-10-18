@@ -40,13 +40,14 @@ class IXUSField(Field):
         elif '% of IC Safety Code 6 Public' in df.columns:
             standard = 'Code6'
             column = '% of IC Safety Code 6 Public'
-
+        
         df = df.rename(columns = {column:'percentage'})
         df['S'] = getZone(f,standard)[1]*df['percentage']
 
         super().__init__(df,f,type = 'IXUS',standard=standard)
         self.axis1  = 'X'
         self.axis2 = 'Y'
+        print(self.df)
 
     def plot2DZones(self, Ncolor='blue', GPcolor='yellow', Ocolor='red', xfig=6, yfig=4, axis1='Y', axis2='X',show = True):
         return super().plot2DZones(Ncolor, GPcolor, Ocolor, xfig, yfig, axis1, axis2,show)

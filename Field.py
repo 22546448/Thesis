@@ -197,14 +197,15 @@ def GetFarField(filename,compress = True,standard = 'FCC',power = 80):
             if line[0] != '#' and line[0] != '*' and line[0] != '\n':
                 dataT[i] = line[4:-1].split('   ')
                 i+=1
-        df = pd.DataFrame(dataT,columns=['Theta','Phi','Re(Etheta)','Im(Etheta)','Re(Ephi)','Im(Ephi)','Directivity(Theta)','Directivity(Phi)','Directivity(Total)'])
+        df = pd.DataFrame(dataT,columns=['theta','phi','Re(Etheta)','Im(Etheta)','Re(Ephi)','Im(Ephi)','Directivity(Theta)','Directivity(Phi)','Gain'])
         df = df.astype(float)
+        df = df.drop(columns=['Re(Etheta)','Im(Etheta)','Re(Ephi)','Im(Ephi)','Directivity(Theta)','Directivity(Phi)'])
     file.close()
 
-    df['Etheta'] = (df['Re(Etheta)'] + df['Im(Etheta)']*1j)/np.sqrt(2)
-    df['Ephi'] = (df['Re(Ephi)'] + df['Im(Ephi)']*1j)/np.sqrt(2)
-    df['|E|'] = np.sqrt(np.absolute(df['Etheta'])**2 + np.absolute(df['Ephi'])**2)
-    df['S(E)'] = df['|E|']**2/(337*2)
+    #df['Etheta'] = (df['Re(Etheta)'] + df['Im(Etheta)']*1j)/np.sqrt(2)
+    #df['Ephi'] = (df['Re(Ephi)'] + df['Im(Ephi)']*1j)/np.sqrt(2)
+    #df['|E|'] = np.sqrt(np.absolute(df['Etheta'])**2 + np.absolute(df['Ephi'])**2)
+    #df['S(E)'] = df['|E|']**2/(337*2)
     return df
 
 def plotFarField(df):
@@ -223,11 +224,9 @@ def GetGain(phi,theta, filename = "IEC-62232-panel-antenna_FarField1.ffe"):
     FarField = GetFarField(filename,False)[['Theta','Phi','Directivity(Total)']]
     #FarField_Grouped = FarField.groupby()
     gain = []
-    print(len(phi))
     for i in range(len(phi)): 
         p = np.round(theta[i]*180/(2*np.pi))
         t =np.round(phi[i]*180/(2*np.pi))
-       #print('{} and {}'.format(p,t))
         gain.append(FarField.loc[(FarField['Theta'] == p) & (FarField['Phi'] ==  t),'Directivity(Total)'].to_numpy()[0])   
     return np.array(gain)
 
@@ -490,7 +489,7 @@ def OET65near(R, power = 80, D = 2.25, AHPBW = 85):
     return power*180/(R*D*AHPBW*np.pi)
 
 
-def OET65far(R,power = 80, G = 17):
+def OET65far(R,G,power = 80):
     G = 10**(G/10)
     return power*G/(4*np.pi*R**2)
 
@@ -524,7 +523,7 @@ def ICNIRPmeshAverage(R, phi, theta, f = 900, D = 2.25):
             S.append(SimpleSphericalSector(theta[i], phi[i], R[i]))
     return np.array(S)
 
-def OET65mesh1(R, D = 2.25, f = 900):
+def OET65mesh(R, G, D = 2.25, f = 900):
     lamda = 3*10**8/(f*10**6)
     Rreactive = 0.62*np.sqrt(D**3/lamda)
     Rnearfield = 2*D**2/lamda
@@ -533,7 +532,7 @@ def OET65mesh1(R, D = 2.25, f = 900):
         if R[i] < Rnearfield:
             S.append(OET65near(R[i]))
         elif R[i] > Rnearfield:
-            S.append(OET65far(R[i]))
+            S.append(OET65far(R[i],G[i]))
     return np.array(S)
     
 
