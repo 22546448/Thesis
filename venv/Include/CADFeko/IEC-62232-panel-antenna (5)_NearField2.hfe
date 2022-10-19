@@ -1,0 +1,18 @@
+##File Type: Magnetic Near Field
+##File Format: 8
+##Source: IEC-62232-panel-antenna (5)
+##Date: 2022-10-18 22:44:39  
+** File exported by Altair Feko - Solver (seq) Version 2022-14825 from 2022-03-31
+
+
+#Configuration Name: humanStandardConfiguration1
+#Request Name: NearField2
+#Frequency:   9.00000000E+008
+#Coordinate System: Cartesian
+#No. of X Samples: 1
+#No. of Y Samples: 1
+#No. of Z Samples: 1
+#Result Type: Magnetic Field Values
+#No. of Header Lines: 1
+#         "X"                "Y"                "Z"              "Re(Hx)"           "Im(Hx)"           "Re(Hy)"           "Im(Hy)"           "Re(Hz)"           "Im(Hz)"    
+    5.78555496E+000    1.54291427E+000    0.00000000E+000    1.66457023E-003   -5.16120340E-002   -8.51115709E-003    1.94310826E-001   -9.51429418E-004   -3.50387172E-003

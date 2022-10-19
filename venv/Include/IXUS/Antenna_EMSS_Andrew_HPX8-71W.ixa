@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<antennaModels xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" packageLevel="NPowerPorts">
+  <antennaManufacturer abbreviation="Andrew" name="Andrew">
+    <antennaModel dataSource="EMSS" kind="9" type="dish" name="HPX8-71W" version="6" width="2.4" depth="1.455" height="2.4">
+      <configuration horizontalCount="1" verticalCount="1" rotationAroundAxis="0" />
+      <frequencyBand frequency="7750000000" maxFrequency="7750000000" minFrequency="7750000000" elementSpacing="-1" numberOfPorts="2" specifiedSimulationPower="0" apertureDiameter="2.4" gainDbi="42.8">
+        <frequencyBandSpecification specifiedGainDbi="42.8" />
+      </frequencyBand>
+      <geometrySpecification specifiedHeightM="2.4" />
+    </antennaModel>
+  </antennaManufacturer>
+</antennaModels>

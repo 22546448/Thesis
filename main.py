@@ -2,7 +2,7 @@ from audioop import lin2adpcm
 from cProfile import label
 from matplotlib.dates import SecondLocator
 from sympy import GoldenRatio
-from EMFFeko import *
+from Field import *
 from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
@@ -11,7 +11,7 @@ import time
 import mayavi.mlab as mlab
 
 
-CylindricalValidationTest()
+Validationtest1()
 
 
 

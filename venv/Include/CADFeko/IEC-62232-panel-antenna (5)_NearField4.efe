@@ -1,0 +1,18 @@
+##File Type: Electric Near Field
+##File Format: 8
+##Source: IEC-62232-panel-antenna (5)
+##Date: 2022-10-18 22:44:39  
+** File exported by Altair Feko - Solver (seq) Version 2022-14825 from 2022-03-31
+
+
+#Configuration Name: humanStandardConfiguration1
+#Request Name: NearField4
+#Frequency:   9.00000000E+008
+#Coordinate System: Cartesian
+#No. of X Samples: 1
+#No. of Y Samples: 1
+#No. of Z Samples: 1
+#Result Type: Electric Field Values
+#No. of Header Lines: 1
+#         "X"                "Y"                "Z"              "Re(Ex)"           "Im(Ex)"           "Re(Ey)"           "Im(Ey)"           "Re(Ez)"           "Im(Ez)"    
+    9.95194698E+000    2.57819045E+000    0.00000000E+000   -2.56320496E+000   -7.06628608E-001   -1.51661480E-001   -1.06516801E+000    3.37447909E+001   -2.93957930E+001
