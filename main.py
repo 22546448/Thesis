@@ -11,7 +11,13 @@ import time
 import mayavi.mlab as mlab
 
 
-Validationtest1()
+df = GetField('IEC-62232-panel-antenna_2Dxy.efe','IEC-62232-panel-antenna_2Dxy.hfe').df
+
+#plotByCylindrical(df)
+
+plotBySZones(df,6,mode='Average')
+
+
 
 
 
