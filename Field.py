@@ -34,8 +34,9 @@ class Field:
         self.standard = standard
         self.df = df
         self.f = f
-
+        
         if restriction:
+            print('here')
             maxFreq = getZone(self.f,standard)[1]
             minFreq = getZone(self.f,standard)[0]  
             self.df['Restriction'] = 1
@@ -44,7 +45,7 @@ class Field:
 
 class Fekofield(Field):
     def __init__(self,power,source,frequency,coordSystem, xSamples, ySamples, zSamples,standard,df):
-        super().__init__(df,frequency*(10**-6),type = 'Feko',standard=standard, restriction = False)
+        super().__init__(df,frequency*(10**-6),type = 'Feko',standard=standard, restriction = True)
         self.source = source
         self.frequency = frequency
         self.coordSystem= coordSystem
@@ -83,107 +84,6 @@ class Fekofield(Field):
             mlab.surf(arr,warp_scale = 'auto')
             mlab.show()
 
-
-
-
-      
-def GetField(filenameE,filenameH,S = 'S(E)',compress = False ,standard = 'FCC',power = 80):
-    source= ''
-    frequency= 900
-    coordSystem= ''
-    xSamples= 0
-    ySamples= 0
-    zSamples= 0
-    global i
-    i = 0
-    filenameE = 'venv/Include/CADFeko/{}'.format(filenameE)
-    filenameH = 'venv/Include/CADFeko/{}'.format(filenameH)
-
-    with open(filenameE, 'r') as file:
-        for line in file:
-            if '##Source: ' in line:
-                source = line[:-1].split("##Source: ",1)[1]
-            elif "#Frequency: " in line:
-                frequency = int(float(line[:-1].split("#Frequency:   ",1)[1]))  
-            elif "#Coordinate System: " in line:
-                coordSystem = line[:-1].split("#Coordinate System: ",1)[1]
-            elif "#No. of X Samples: " in line:
-                xSamples = int(line[:-1].split("No. of X Samples: ",1)[1])
-            elif "#No. of Y Samples: " in line:
-                ySamples = int(line[:-1].split("No. of Y Samples: ",1)[1])
-            elif "#No. of Z Samples: " in line:
-                zSamples = int(line[:-1].split("No. of Z Samples: ",1)[1])
-
-                global dataT
-                dataT = np.zeros((ySamples*xSamples*zSamples,9)) 
-            if line[0] != '#' and line[0] != '*' and line[0] != '\n':
-                dataT[i] = line[4:-1].split('   ')
-                i+=1
-        df = pd.DataFrame(dataT,columns=['X','Y','Z','Re(Ex)','Im(Ex)','Re(Ey)','Im(Ey)','Re(Ez)','Im(Ez)'])
-        df = df.astype(float)
-        df['R'] = np.sqrt(df['X']**2 + df['Y']**2 + df['Z']**2)
-        df['phi'] = np.arctan(df['Y']/df['X'])
-        df['theta'] = np.arctan(df['X']/df['Z'])
-        dfG = GetFarField('IEC-62232-panel-antenna (4)_FarField1.ffe')
-        phi = df['phi']
-        theta = df['theta']
-        df['phi'] = np.abs(np.round(df['phi']*180/np.pi))
-        df['theta'] = np.abs(np.round(df['theta']*180/np.pi))
-        df = df.merge(dfG,how='left',on=['phi','theta'])
-        df['phi'] = phi
-        df['theta'] = theta
-    file.close()
-
-    with open(filenameH, 'r') as file:
-        dataH = np.zeros((ySamples*xSamples*zSamples,6))
-        i = 0
-        for line in file:
-            if line[0] != '#' and line[0] != '*' and line[0] != '\n':
-                dataH[i] = line[4:-1].split('   ')[3:]
-                i+=1
-    file.close()
-    df['Re(Hx)'] = dataH[:,0]
-    df['Im(Hx)'] = dataH[:,1]
-    df['Re(Hy)'] = dataH[:,2]
-    df['Im(Hy)'] = dataH[:,3]
-    df['Re(Hz)'] = dataH[:,4]
-    df['Im(Hz)'] = dataH[:,5]
-
-    df['Ex'] = (df['Re(Ex)'] + df['Im(Ex)']*1j)/np.sqrt(2)
-    df['|Ex|'] = np.absolute(df['Ex'])
-    df['Ey'] = (df['Re(Ey)'] + df['Im(Ey)']*1j)/np.sqrt(2)
-    df['|Ey|'] = np.absolute(df['Ey'])
-    df['Ez'] = (df['Re(Ez)'] + df['Im(Ez)']*1j)/np.sqrt(2)
-    df['|Ez|'] = np.absolute(df['Ez'])
-    df['Hx'] = (df['Re(Hx)'] + df['Im(Hx)']*1j)/np.sqrt(2)
-    df['Hy'] = (df['Re(Hy)'] + df['Im(Hy)']*1j)/np.sqrt(2)
-    df['Hz'] = (df['Re(Hz)'] + df['Im(Hz)']*1j)/np.sqrt(2)
-
-    df['|E|'] = np.sqrt(np.absolute(df['Ex'])**2+ np.absolute(df['Ey'])**2 + np.absolute(df['Ez'])**2)
-
-    #df['Hx'] = np.conj(df['Hx'])
-    #df['Hy'] = np.conj(df['Hy'])
-    #df['Hz'] = np.conj(df['Hz'])
-    df['Sx'] = df['Ey']*df['Hz'] - df['Ez']*df['Hy']
-    df['Sy'] = df['Ez']*df['Hx'] - df['Ex']*df['Hz']
-    df['Sz'] = df['Ex']*df['Hy'] - df['Ey']*df['Hx']
-
-    df['Full wave'] = np.sqrt(np.absolute(df['Sx'])**2 + np.absolute(df['Sy'])**2 + np.absolute(df['Sz'])**2)/2
-    df['Classical'] = Classical(df['|E|'].to_numpy())/2
-    df['OET65'] = OET65mesh(df['R'],df['Gain'])
-    df['IEC Peak'] = IECmeshPeakSector(df['R'], df['phi'], df['theta'])
-    df['IEC Average'] = IECmeshAverageSector(df['R'], df['phi'], df['theta'])
-    df['EMSS Peak'] = EMSSmeshPeakSector(df['R'], df['phi'], df['theta'])
-    df['EMSS Average'] = EMSSmeshAverageSector(df['R'], df['phi'], df['theta'])
-
-    df['S'] = df['Full wave']
-    if compress:
-        df = df.drop(columns = ['R','Re(Ex)','Im(Ex)','Re(Ey)','Im(Ey)','Re(Ez)','Im(Ez)','Re(Hx)','Im(Hx)','Re(Hy)','Im(Hy)','Re(Hz)','Im(Hz)','Ex','Ey','Ez','Hx','Hy','Hz','|E|','Sx','Sy','Sz','|Ex|','|Ey|','|Ez|','Full wave'])
-    
-    return Fekofield(source,power,frequency,coordSystem, xSamples, ySamples, zSamples,standard,df)
-
-   
-
     def PowerAtPoint(data):
         S = np.zeros(len(data))
         for j in range(len(data)):
@@ -211,8 +111,9 @@ def GetField(filenameE,filenameH,S = 'S(E)',compress = False ,standard = 'FCC',p
         dfH =  dfH.astype(float)
         return dfH
 
-    def plot2DZones(self,Ncolor = 'blue',GPcolor = 'yellow',Ocolor = 'red',xfig = 6,yfig = 4,axis1 = 'X',axis2 = 'Y',show = True):
+    def plot2DZones(self,Ncolor = 'blue',GPcolor = 'yellow',Ocolor = 'red',xfig = 6,yfig = 4,axis1 = 'X',axis2 = 'Y',show = True,S = 'Full wave'):
         colors = {0:Ncolor,1:GPcolor,2:Ocolor}
+        labels = ['Safe','General Public','Occupational']
         #plt.scatter(x=self.df[X], y=self.df[Y],c= self.df['Restriction'].map(colors))
 
         groups = self.df.groupby('Restriction')
@@ -223,22 +124,10 @@ def GetField(filenameE,filenameH,S = 'S(E)',compress = False ,standard = 'FCC',p
                     c=group['Restriction'].map(colors), label=label)
 
         ax.set(xlabel= axis1, ylabel=axis2)
-        ax.set_title("Restricions with %d signal" % self.f)
-        ax.legend(title='Restriction levels')
+        ax.set_title("Restricions with {} simulation method".format(S))
+        ax.legend(labels =labels, title='Restriction levels')
         if show:
             plt.show()
-
-
-
-    def plot2D(self,c='S',color = 'Reds',method = 'matplotlib'):
-        if method == 'matplotlib':
-            fig, ax = plt.subplots(1)
-            ax1 =ax.scatter(x =self.df[self.axis[0]],y= self.df[self.axis[1]],c =self.df[c],cmap = color)
-            plt.colorbar(ax1)
-            ax.set_xlabel(self.axis[0])
-            ax.set_ylabel(self.axis[1])
-            ax.set_title("{} over {}{} plane".format(c,self.axis[0],self.axis[1]))
-
 
     def compareToSelf(self,standard1,S2 = 'S',S1 = 'S',standard2 = None,Ncolor = 'blue',GPcolor = 'yellow',Ocolor = 'red',xfig = 6,yfig = 4,axis1 = 'X',axis2 = 'Y',show = True,c='Restriction'):
         if c == 'Restriction':
@@ -325,6 +214,111 @@ def GetField(filenameE,filenameH,S = 'S(E)',compress = False ,standard = 'FCC',p
             plt.show()
 
 
+
+      
+def GetField(filenameE,filenameH,S = 'Full wave',compress = False ,standard = 'FCC',power = 80):
+    source= ''
+    frequency= 900
+    coordSystem= ''
+    xSamples= 0
+    ySamples= 0
+    zSamples= 0
+    global i
+    i = 0
+    filenameE = 'venv/Include/CADFeko/{}'.format(filenameE)
+    filenameH = 'venv/Include/CADFeko/{}'.format(filenameH)
+
+    with open(filenameE, 'r') as file:
+        for line in file:
+            if '##Source: ' in line:
+                source = line[:-1].split("##Source: ",1)[1]
+            elif "#Frequency: " in line:
+                frequency = int(float(line[:-1].split("#Frequency:   ",1)[1]))  
+            elif "#Coordinate System: " in line:
+                coordSystem = line[:-1].split("#Coordinate System: ",1)[1]
+            elif "#No. of X Samples: " in line:
+                xSamples = int(line[:-1].split("No. of X Samples: ",1)[1])
+            elif "#No. of Y Samples: " in line:
+                ySamples = int(line[:-1].split("No. of Y Samples: ",1)[1])
+            elif "#No. of Z Samples: " in line:
+                zSamples = int(line[:-1].split("No. of Z Samples: ",1)[1])
+
+                global dataT
+                dataT = np.zeros((ySamples*xSamples*zSamples,9)) 
+            if line[0] != '#' and line[0] != '*' and line[0] != '\n':
+                dataT[i] = line[4:-1].split('   ')
+                i+=1
+        df = pd.DataFrame(dataT,columns=['X','Y','Z','Re(Ex)','Im(Ex)','Re(Ey)','Im(Ey)','Re(Ez)','Im(Ez)'])
+        df = df.astype(float)
+        df['R'] = np.sqrt(df['X']**2 + df['Y']**2 + df['Z']**2)
+        df['phi'] = np.arctan(df['Y']/df['X'])
+        df['theta'] = np.arctan(df['X']/df['Z'])
+        dfG = GetFarField('IEC-62232-panel-antenna (4)_FarField1.ffe')
+        phi = df['phi']
+        theta = df['theta']
+        df['phi'] = np.abs(np.round(df['phi']*180/np.pi))
+        df['theta'] = np.abs(np.round(df['theta']*180/np.pi))
+        df = df.merge(dfG,how='left',on=['phi','theta'])
+        df['phi'] = phi
+        df['theta'] = theta
+    file.close()
+
+    with open(filenameH, 'r') as file:
+        dataH = np.zeros((ySamples*xSamples*zSamples,6))
+        i = 0
+        for line in file:
+            if line[0] != '#' and line[0] != '*' and line[0] != '\n':
+                dataH[i] = line[4:-1].split('   ')[3:]
+                i+=1
+    file.close()
+    df['Re(Hx)'] = dataH[:,0]
+    df['Im(Hx)'] = dataH[:,1]
+    df['Re(Hy)'] = dataH[:,2]
+    df['Im(Hy)'] = dataH[:,3]
+    df['Re(Hz)'] = dataH[:,4]
+    df['Im(Hz)'] = dataH[:,5]
+
+    df['Ex'] = (df['Re(Ex)'] + df['Im(Ex)']*1j)/np.sqrt(2)
+    df['|Ex|'] = np.absolute(df['Ex'])
+    df['Ey'] = (df['Re(Ey)'] + df['Im(Ey)']*1j)/np.sqrt(2)
+    df['|Ey|'] = np.absolute(df['Ey'])
+    df['Ez'] = (df['Re(Ez)'] + df['Im(Ez)']*1j)/np.sqrt(2)
+    df['|Ez|'] = np.absolute(df['Ez'])
+    df['Hx'] = (df['Re(Hx)'] + df['Im(Hx)']*1j)/np.sqrt(2)
+    df['Hy'] = (df['Re(Hy)'] + df['Im(Hy)']*1j)/np.sqrt(2)
+    df['Hz'] = (df['Re(Hz)'] + df['Im(Hz)']*1j)/np.sqrt(2)
+
+    df['|E|'] = np.sqrt(np.absolute(df['Ex'])**2+ np.absolute(df['Ey'])**2 + np.absolute(df['Ez'])**2)
+
+    #df['Hx'] = np.conj(df['Hx'])
+    #df['Hy'] = np.conj(df['Hy'])
+    #df['Hz'] = np.conj(df['Hz'])
+    df['Sx'] = df['Ey']*df['Hz'] - df['Ez']*df['Hy']
+    df['Sy'] = df['Ez']*df['Hx'] - df['Ex']*df['Hz']
+    df['Sz'] = df['Ex']*df['Hy'] - df['Ey']*df['Hx']
+
+    df['Full wave'] = np.sqrt(np.absolute(df['Sx'])**2 + np.absolute(df['Sy'])**2 + np.absolute(df['Sz'])**2)/2
+    df['Classical'] = Classical(df['|E|'].to_numpy())/2
+    df['OET65'] = OET65mesh(df['R'],df['Gain'])
+#def IECmeshPeakSector(R, phi, theta,power = 80, f = 900, D = 2.25,y = 5*np.pi/180,G = 17, Globe = 11, VHPBW=8, AHPBW=84):
+
+    df['IEC Peak'] = IECmeshPeakSector(df['R'], df['phi'], df['theta'],df['Gain'],power = 80, f = 900, D = 2.25,y =0,G = 17, Globe = -3.6, VHPBW=8.5, AHPBW=85)
+    df['IEC Average'] = IECmeshAverageSector(df['R'], df['phi'], df['theta'],power = 80, f = 900, D = 2.25,y =0,G = 17, Globe = 11, VHPBW=8.5, AHPBW=85)
+    df['EMSS Peak'] = EMSSmeshPeakSector(df['R'], df['phi'], df['theta'],power = 80, f = 900, D = 2.25,y =0,G = 17, Globe = 11, VHPBW=8.5, AHPBW=85)
+    df['EMSS Average'] = EMSSmeshAverageSector(df['R'], df['phi'], df['theta'],power = 80, f = 900, D = 2.25,y =0,G = 17, Globe = 11, VHPBW=8.5, AHPBW=85)
+
+
+    df['S'] = 2*df[S]
+    if compress:
+        df = df.drop(columns = ['R','Re(Ex)','Im(Ex)','Re(Ey)','Im(Ey)','Re(Ez)','Im(Ez)','Re(Hx)','Im(Hx)','Re(Hy)','Im(Hy)','Re(Hz)','Im(Hz)','Ex','Ey','Ez','Hx','Hy','Hz','|E|','Sx','Sy','Sz','|Ex|','|Ey|','|Ez|','Full wave'])
+    
+    return Fekofield(source,power,frequency,coordSystem, xSamples, ySamples, zSamples,standard,df)
+
+   
+
+
+
+
 def GetFarField(filename,compress = True,standard = 'FCC',power = 80):
     source= ''
     frequency= 900
@@ -400,62 +394,64 @@ def test_mesh(df,error = 1,S = 10):
     mlab.show()
 
 #def plotSbyPhase
-def plotBySZones(df, *S,Y = 'y', X = 'x', error = 0.01,round = 3,mode = 'Peak'):
+def plotBySZones(df, *S,Y = 'y', X = 'x', error = 0.01,round = 3):
+    legends = ['k_', 'k*', 'kD', 'k+', 'k--']
+    axis = [0,0]
+    figure, (axis[0],axis[1]) = plt.subplots(1,2)
     for s in S:
-        if mode == 'Peak':
-            methods = ['Full wave', 'IEC Peak', 'EMSS Peak', 'Classical', 'OET65']
-            legends = ['ko', 'k*', 'k.', 'k+', 'k--']
-            for method,legend in zip(methods,legends):
-                temp = df.loc[(df[method] >= s-error) & (df[method] < s+error)]
-                #temp['theta'] = np.round(temp['theta'],round)
-                #temp['phi'] = np.round(temp['phi'],round)
-                #idx = temp.groupby(['phi','theta'])[method].transform(max) == temp[method]
-                #temp = temp.sort_values(by = ['phi'])
-                #plt.plot(temp[idx]['X'],temp[idx]['Y'],legend ,label = '{} = {}W/m'.format(method,s))
-                plt.plot(temp['X'],temp['Y'],legend ,label = '{} = {}W/m'.format(method,s))
-        elif mode == 'Average':
-            methods = ['Full wave', 'IEC Average', 'EMSS Average', 'Classical', 'OET65']
-            legends = ['ko', 'k*', 'k.', 'k.', 'k--']
-            df['Full wave'] = df['Full wave']/2
-            df['Classical'] = df['Classical']/2
-            for method,legend in zip(methods,legends):
-                temp = df.loc[(df[method] >= s-error) & (df[method] < s+error)]
-                #temp['theta'] = np.round(temp['theta'],round)
-                #temp['phi'] = np.round(temp['phi'],round)
-                #idx = temp.groupby(['phi','theta'])['Full wave'].transform(max) == temp['Full wave']
-                #temp = temp.sort_values(by = ['phi'])
-                #plt.plot(temp[idx]['X'],temp[idx]['Y'], '-',label = 'Full wave = {}W/m'.format(s))
-                plt.plot(temp['X'],temp['Y'], legend,label = '{} = {}W/m'.format(method,s))
-    plt.title('Comparing various simulation methods of a 900Mhz,80W sector antenna at various S values')
-    plt.xlabel('X (m)')
-    plt.ylabel('Y (m)')
-    plt.legend()
-    #plt.xlim([0,40])
-    #plt.ylim([-40,40])
+        methods = ['Full wave', 'IEC Peak', 'EMSS Peak', 'Classical', 'OET65']
+        for method,legend in zip(methods,legends):
+            temp = df.loc[(df[method] >= s-error) & (df[method] < s+error)]
+            axis[0].plot(temp['X'],temp['Y'],legend ,label = '{}'.format(method))
+        axis[0].set_xlabel('X (m)')
+        axis[0].set_ylabel('Y (m)')
+        axis[0].set_title('Peak estimations')
+        
+        methods = ['Full wave', 'IEC Average', 'EMSS Average','Classical', 'OET65']
+        df['Full wave'] = df['Full wave']/2
+        df['Classical'] = df['Classical']/2
+        for method,legend in zip(methods,legends):
+            temp = df.loc[(df[method] >= s-error) & (df[method] < s+error)]
+            axis[1].plot(temp['X'],temp['Y'], legend,label = '{} '.format(method))
+        axis[1].set_xlabel('X (m)')
+        axis[1].set_ylabel('Y (m)')
+        axis[1].set_title('Average estimations')
+    figure.suptitle('Comparing various simulation methods of a 900Mhz,80W sector antenna at S = 6W/m^2')
+    figure.legend(axis[0].get_legend_handles_labels()[0],axis[0].get_legend_handles_labels()[1],loc='upper right')
+    figure.tight_layout()
     plt.show()
 
 
 def plotByCartesian(df, *X,error = 0.1,mode='Peak'):
-    Y = 'Y'
+    legends = ['k:', 'k--', 'k--', 'k:', 'k-.']
+    axis = [0,0]
+    figure, (axis[0],axis[1]) = plt.subplots(1,2)
+    methodsPeaks = ['Full wave', 'IEC Peak', 'EMSS Peak', 'Classical', 'OET65']
+    methodsAverages = ['Full wave', 'IEC Average', 'EMSS Average', 'Classical', 'OET65']
+    methodsLabels = ['Full wave', 'IEC', 'EMSS', 'Classical', 'OET65']
+
     for x in X:
-        temp = df.loc[(df['X'] >= x-error) & (df['X'] < x+error)]
-        idx = temp.groupby(['Z','Y'])['X'].transform(max) == temp['X']
-        if mode == 'Peak':
-            plt.plot(temp[idx]['Y'],temp[idx]['Full wave']/2,'kD',label = 'Full wave at {}m'.format(x))
-            plt.plot(temp[idx]['Y'],temp[idx]['Classical'],'k-',label = 'Classical at {}m'.format(x))
-            plt.plot(temp[idx]['Y'],temp[idx]['IEC Peak'],'k+' ,label ='IEC Peak at {}m'.format(x))
-            plt.plot(temp[idx]['Y'],temp[idx]['EMSS Peak'],'k*' ,label ='EMSS Peak at {}m'.format(x))
-            plt.plot(temp[idx]['Y'],temp[idx]['OET65'],'k-' ,label ='OET 65 at {}m'.format(x))
-        elif mode == 'Average':
-            plt.plot(temp[idx]['Y'],temp[idx]['Full wave']/2,'kD',label = 'Full wave at {}m'.format(x))
-            plt.plot(temp[idx]['Y'],temp[idx]['Classical']/2,'k-',label = 'Classical at {}m'.format(x))
-            plt.plot(temp[idx]['Y'],temp[idx]['IEC Average'],'k+' ,label ='IEC Average at {}m'.format(x))
-            plt.plot(temp[idx]['Y'],temp[idx]['EMSS Average'],'k*' ,label ='EMSS Average at {}m'.format(x))
-            plt.plot(temp[idx]['Y'],temp[idx]['OET65'],'k-' ,label ='OET 65 at {}m'.format(x))
-    plt.legend()
-    plt.xlabel('Y (m)')
-    plt.ylabel('S (W/m^2)')
-    plt.title( 'Comparing various simulation methods of a 900Mhz,80W sector antenna at various x positions')
+        for methodsPeak,methodsAverage,methodslabel,legend in zip(methodsPeaks,methodsAverages,methodsLabels,legends):
+            temp = df.loc[(df['X'] >= x-error) & (df['X'] < x+error)]
+            idx = temp.groupby(['Z','Y'])['X'].transform(max) == temp['X']
+            axis[0].plot(temp[idx]['Y'],temp[idx][methodsPeak],legend,label = '{}'.format(methodslabel))
+
+            if (methodsAverage == 'Full wave') or (methodsAverage == 'Classical'):
+                axis[1].plot(temp[idx]['Y'],temp[idx][methodsAverage]/2,legend ,label ='{}'.format(methodslabel))
+            else:
+                axis[1].plot(temp[idx]['Y'],temp[idx][methodsAverage],legend ,label ='{}'.format(methodslabel))
+
+
+
+    axis[0].set_title('Peak estimations')
+    axis[0].set_xlabel('X (m)')
+    axis[0].set_ylabel('S (W/m^2)')
+    axis[1].set_title('Average estimations')
+    axis[1].set_xlabel('X (m)')
+    axis[1].set_ylabel('S (W/m^2)')
+    figure.suptitle('Comparing various simulation methods of a 900Mhz,80W sector antenna at various x positions')
+    figure.legend(axis[0].get_legend_handles_labels()[0],axis[0].get_legend_handles_labels()[1],loc='upper right')
+    figure.tight_layout()
     plt.show()
 
 def plotByCylindrical(df):
@@ -477,7 +473,7 @@ def plotByCylindrical(df):
 def AverageCylindricalSector(phi,R,power = 80,AHPBW = 85,D = 2.25,G= 17,y = 0,ry = None):
     G = 10**(G/10)
     AHPBW = np.pi*AHPBW/180
-    ro = AHPBW*D*np.cos(y)**2/12
+    ro = AHPBW*D*G*np.cos(y)**2/12
     if ry is None:
         ry = R/np.cos(y)
     return power*2**(-2*(phi/AHPBW)**2)/(AHPBW*ry*D*(np.cos(y)**2)*np.sqrt(1 + (ry/ro)**2))
@@ -485,9 +481,9 @@ def AverageCylindricalSector(phi,R,power = 80,AHPBW = 85,D = 2.25,G= 17,y = 0,ry
 def PeakCylindricalSector(phi,R,power = 80,AHPBW = 85,D = 2.25,G= 17,y = 0):
     G = 10**(G/10)
     AHPBW *= np.pi/180
-    ro = AHPBW*D*np.cos(y)**2/12
+    ro = (AHPBW*D*G*np.cos(y)**2)/12
     ry = R/np.cos(y)
-    return 2*power*2**(-2*(phi/AHPBW)**2)/(AHPBW*ry*D*np.cos(y)**2*np.sqrt(1 + (2*ry/ro)**2))
+    return (2*power*2**(-2*(phi/AHPBW)**2))/(AHPBW*ry*D*np.cos(y)**2*np.sqrt(1 + (2*ry/ro)**2))
 
 def AdjustedSphericalSector(theta,phi,R,power = 80, VHPBW = 8.5, AHPBW = 85, D = 2.25, G = 17,Globe = -3.6, y = 0):
     G = 10**(G/10)
@@ -699,50 +695,55 @@ def CylindricalValidationTest():
     df['theta'] = np.array([theta for r in R])
     OET65 = OET65mesh(Ry,getGain(df),D=D)
 
+
+    legends = ['kD', 'k_', 'k:', 'k+', 'k--','k-.','ko']
+    methods = ['IEC Estimation', 'EMSS Estimation','FCC OET 65','Ray Tracing','S = ExH' ,'S=|E|^2/377','Reference results']
     axis = [0,0]
     figure, (axis[0],axis[1]) = plt.subplots(1,2)
-    axis[0].plot(Ry,IECSectorAverage,'kD',label = 'IEC Average Estimation')
-    axis[0].plot(Ry,IECSectorAverage,'k*',label = 'EMSS Average Estimation')
-    axis[0].plot(Ry,SectorSpacialAverage,'k:',label = 'Sector-coverage Spacial-average reference results')
-    axis[0].plot(Ry,OET65,'k-.',label = 'FCC OET 65')
-    axis[0].plot(Ry,IXUSAverage,'k_',label = 'IXUS')
-    axis[0].plot(Ry,Fullwave/2,'k--',label = 'S = ExH')
-    axis[0].plot(Ry,classical/2,'ko',label = 'S=|E|^2/377')
+    axis[0].plot(Ry,IECSectorAverage,legends[0],label = 'IEC Average Estimation')
+    axis[0].plot(Ry,IECSectorAverage,legends[1],label = 'EMSS Average Estimation')
+    axis[0].plot(Ry,OET65,legends[2],label = 'FCC OET 65')
+    axis[0].plot(Ry,IXUSAverage,legends[3],label = 'Ray Tracing')
+    axis[0].plot(Ry,Fullwave,legends[4],label = 'S = ExH')
+    axis[0].plot(Ry,classical,legends[5],label = 'S=|E|^2/377')
+    axis[0].plot(Ry,SectorSpacialAverage,legends[6],label = 'Sector-coverage Spacial-average reference results')
+
     axis[0].set_ylabel('S(W/m^2)')
     axis[0].set_xlabel('Ry (m)')
-    axis[0].set_title('Validation test 2 Sector-coverage average results')
-    axis[1].plot(Ry,(IECSectorAverage-SectorSpacialAverage)/SectorSpacialAverage*100,'kD',label = 'IEC Average Estimation')
-    axis[1].plot(Ry,(IECSectorAverage-SectorSpacialAverage)/SectorSpacialAverage*100,'k*',label = 'EMSS Average Estimation')
-    axis[1].plot(Ry,(OET65-SectorSpacialAverage)/SectorSpacialAverage*100,'k-.',label = 'FCC OET 65')
-    axis[1].plot(Ry,(IXUSAverage-SectorSpacialAverage)/SectorSpacialAverage*100,'k_',label = 'IXUS')
-    axis[1].plot(Ry,(0.5*Fullwave-SectorSpacialAverage)/SectorSpacialAverage*100,'k--',label = 'S = ExH')
-    axis[1].plot(Ry,(0.5*classical-SectorSpacialAverage)/SectorSpacialAverage*100,'ko',label = 'S=|E|^2/377')
+    axis[0].set_title('Sector-coverage average results')
+    axis[1].plot(Ry,(IECSectorAverage-SectorSpacialAverage)/SectorSpacialAverage*100,legends[0],label = 'IEC Average Estimation')
+    axis[1].plot(Ry,(IECSectorAverage-SectorSpacialAverage)/SectorSpacialAverage*100,legends[1],label = 'EMSS Average Estimation')
+    axis[1].plot(Ry,(OET65-SectorSpacialAverage)/SectorSpacialAverage*100,legends[2],label = 'FCC OET 65')
+    axis[1].plot(Ry,(IXUSAverage-SectorSpacialAverage)/SectorSpacialAverage*100,legends[3],label = 'Ray Tracing')
+    axis[1].plot(Ry,(Fullwave-SectorSpacialAverage)/SectorSpacialAverage*100,legends[4],label = 'S = ExH')
+    axis[1].plot(Ry,(classical-SectorSpacialAverage)/SectorSpacialAverage*100,legends[5],label = 'S=|E|^2/377')
     axis[1].set_ylabel('Percentage of reference results')
     axis[1].set_xlabel('Ry (m)')
     axis[1].set_title('Percentage of  Peak results')
-    figure.legend(axis[0].get_legend_handles_labels()[0],axis[0].get_legend_handles_labels()[1],loc='upper center')
+    figure.legend(labels=methods,loc='upper center')
     figure.tight_layout()
 
     figure, (axis[0],axis[1]) = plt.subplots(1,2)
-    axis[0].plot(Ry,IECSectorPeak,'kD',label = 'IEC Peak Estimation')
-    axis[0].plot(Ry,IECSectorPeak,'k*',label = 'EMSS Peak Estimation')
-    axis[0].plot(Ry,SectorSpacialPeak,'k:',label = 'Sector-coverage Spacial-peak reference results')
-    axis[0].plot(Ry,OET65,'k-.',label = 'FCC OET 65')
-    axis[0].plot(Ry,Fullwave,'k--',label = 'S = ExH')
-    axis[0].plot(Ry,classical,'ko',label = 'S=|E|^2/377')
+    axis[0].plot(Ry,IECSectorPeak,legends[0],label = 'IEC Peak Estimation')
+    axis[0].plot(Ry,IECSectorPeak,legends[1],label = 'EMSS Peak Estimation')
+    axis[0].plot(Ry,OET65,legends[2],label = 'FCC OET 65')
+    axis[0].plot(Ry,IXUSAverage,legends[3],label = 'Ray Tracing')
+    axis[0].plot(Ry,Fullwave,legends[4],label = 'S = ExH')
+    axis[0].plot(Ry,classical,legends[5],label = 'S=|E|^2/377')
+    axis[0].plot(Ry,SectorSpacialPeak,legends[6],label = 'Sector-coverage Spacial-peak reference results')
     axis[0].set_ylabel('S(W/m^2)')
     axis[0].set_xlabel('Ry (m)')
-    axis[0].set_title('Validation test 2 Sector-coverage peak results')
-    axis[1].plot(Ry,(IECSectorPeak-SectorSpacialPeak)/SectorSpacialPeak*100,'kD',label = 'IEC Average Estimation')
-    axis[1].plot(Ry,(IECSectorPeak-SectorSpacialPeak)/SectorSpacialPeak*100,'k*',label = 'EMSS Average Estimation')
-    axis[1].plot(Ry,(OET65-SectorSpacialPeak)/SectorSpacialPeak*100,'k-.',label = 'FCC OET 65')
-    axis[1].plot(Ry,(IXUSAverage-SectorSpacialPeak)/SectorSpacialPeak*100,'k_',label = 'IXUS')
-    axis[1].plot(Ry,(Fullwave-SectorSpacialPeak)/SectorSpacialPeak*100,'k--',label = 'S = ExH')
-    axis[1].plot(Ry,(classical-SectorSpacialPeak)/SectorSpacialPeak*100,'ko',label = 'S=|E|^2/377')
+    axis[0].set_title('Sector-coverage peak results')
+    axis[1].plot(Ry,(IECSectorPeak-SectorSpacialPeak)/SectorSpacialPeak*100,legends[0],label = 'IEC Average Estimation')
+    axis[1].plot(Ry,(IECSectorPeak-SectorSpacialPeak)/SectorSpacialPeak*100,legends[1],label = 'EMSS Average Estimation')
+    axis[1].plot(Ry,(OET65-SectorSpacialPeak)/SectorSpacialPeak*100,legends[2],label = 'FCC OET 65')
+    axis[1].plot(Ry,(IXUSAverage-SectorSpacialPeak)/SectorSpacialPeak*100,legends[3],label = 'Ray Tracing')
+    axis[1].plot(Ry,(Fullwave-SectorSpacialPeak)/SectorSpacialPeak*100,legends[4],label = 'S = ExH')
+    axis[1].plot(Ry,(classical-SectorSpacialPeak)/SectorSpacialPeak*100,legends[5],label = 'S=|E|^2/377')
     axis[1].set_ylabel('Percentage of reference results')
     axis[1].set_xlabel('Ry (m)')
     axis[1].set_title('Percentage of  Peak results')
-    figure.legend(axis[0].get_legend_handles_labels()[0],axis[0].get_legend_handles_labels()[1],loc='upper center')
+    figure.legend(labels=methods,loc='upper center')
     figure.tight_layout()
     plt.show()
 
@@ -750,8 +751,12 @@ def CylindricalValidationTest():
 def SphericalValidationTest():
     adjustedSectorS = [52, 353, 313, 210, 141, 98.6, 72, 54.5 ]
     adjustedSectorS = [a/1000 for a in adjustedSectorS]
-    y = 5*np.pi/180
+    simpleSectorS = [22.2, 26.5, 136, 150, 114, 81.1, 57.8, 42.1]
+    simpleSectorS = np.array([a/1000 for a in simpleSectorS])
+    IXUS_percentages = [0.2475, 0.03976, 0.03933, 0.02537, 0.004553, 0.004815, 0.01245, 0.02005]
+    rayTracing = np.array([ixus/100*30 for ixus in IXUS_percentages])
     f = 925
+    y = 5*np.pi/180
     lamda = (3*10**8)/(f*10**6)
     power = 80
     D = 2.158
@@ -767,55 +772,130 @@ def SphericalValidationTest():
     df = pd.DataFrame(phi,columns = ['phi'])
     df['theta'] = theta
 
+ 
     IECSectorAverage = IECmeshAverageSector(theta = theta, phi=phi, R = R,power = power, VHPBW=8, AHPBW=84, D = D, G=Gs, Globe=Globe, y =y )
-    adjustedSpherical = AdjustedSphericalSector(theta = theta, phi=phi, R = R,power = power, VHPBW=8, AHPBW=84, D = D, G=Gs, Globe=Globe, y =y )
-    OET65 = OET65mesh(Ry, getGain(df),D=D,theta = theta+y)
+    EMSSSectorAverage = EMSSmeshAverageSector(theta = theta, phi=phi, R = R,power = power, VHPBW=8, AHPBW=84, D = D, G=Gs, Globe=Globe, y =y )
+    IECSectorPeak = IECmeshPeakSector(theta = theta, phi=phi, R = R,power = power, VHPBW=8, AHPBW=84, D = D, G=Gs, Globe=Globe, y =y )
+    EMSSSectorPeak = EMSSmeshPeakSector(theta = theta, phi=phi, R = R,power = power, VHPBW=8, AHPBW=84, D = D, G=Gs, Globe=Globe, y =y )
+    OET65 = OET65mesh(R, getGain(df),D=D,theta = theta+y)
+
+
+    FEKO1 = GetField('IEC-62232-panel-antenna (5)_spherical1.efe','IEC-62232-panel-antenna (5)_spherical1.hfe')
+    FEKO2 = GetField('IEC-62232-panel-antenna (5)_spherical2.efe','IEC-62232-panel-antenna (5)_spherical2.hfe')
+    FEKO3 = GetField('IEC-62232-panel-antenna (5)_spherical3.efe','IEC-62232-panel-antenna (5)_spherical3.hfe')
+    FEKO4 = GetField('IEC-62232-panel-antenna (5)_spherical4.efe','IEC-62232-panel-antenna (5)_spherical4.hfe')
+    FEKO5 = GetField('IEC-62232-panel-antenna (5)_spherical5.efe','IEC-62232-panel-antenna (5)_spherical5.hfe')
+    FEKO6 = GetField('IEC-62232-panel-antenna (5)_spherical6.efe','IEC-62232-panel-antenna (5)_spherical6.hfe')
+    FEKO7 = GetField('IEC-62232-panel-antenna (5)_spherical7.efe','IEC-62232-panel-antenna (5)_spherical7.hfe')
+    FEKO8 = GetField('IEC-62232-panel-antenna (5)_spherical8.efe','IEC-62232-panel-antenna (5)_spherical8.hfe')
+
+
+    Fullwave1 = FEKO1.df['Full wave'].to_numpy()[0]
+    Fullwave2 = FEKO2.df['Full wave'].to_numpy()[0]
+    Fullwave3 = FEKO3.df['Full wave'].to_numpy()[0]
+    Fullwave4 = FEKO4.df['Full wave'].to_numpy()[0]
+    Fullwave5 = FEKO5.df['Full wave'].to_numpy()[0]
+    Fullwave6 = FEKO6.df['Full wave'].to_numpy()[0]
+    Fullwave7 = FEKO7.df['Full wave'].to_numpy()[0]
+    Fullwave8 = FEKO8.df['Full wave'].to_numpy()[0]
+
+    classical1 = FEKO1.df['Classical'].to_numpy()[0]
+    classical2 = FEKO2.df['Classical'].to_numpy()[0]
+    classical3 = FEKO3.df['Classical'].to_numpy()[0]
+    classical4 = FEKO4.df['Classical'].to_numpy()[0]
+    classical5 = FEKO5.df['Classical'].to_numpy()[0]
+    classical6 = FEKO6.df['Classical'].to_numpy()[0]
+    classical7 = FEKO7.df['Classical'].to_numpy()[0]
+    classical8 = FEKO8.df['Classical'].to_numpy()[0]
+
+    Fullwave = np.array([Fullwave1, Fullwave2, Fullwave3, Fullwave4,Fullwave5, Fullwave6, Fullwave7,Fullwave8])
+    classical = np.array([classical1, classical2, classical3, classical4, classical5, classical6, classical7,classical8])
+
     axis = [0,0]
+    methods = ['S = ExH','S = |E|^2/377','Ray Tracing', 'IEC estimations', 'EMSS estimations', 'FCC OET 65','Reference Results']
+    legends = ['k:', 'kD', 'k--', 'k+', 'k-.','ko','k-']
     figure, (axis[0],axis[1]) = plt.subplots(1,2)   
-    axis[0].plot(d,adjustedSpherical,label = 'SpacialPeakCylindrical')
-    axis[0].plot(d,adjustedSectorS,label = 'Adjusted Spherical Validation line')
-    axis[0].plot(d,OET65,label = 'FCC OET 65')
-    axis[0].plot(d,IECSectorAverage,label = 'IEC Sector-Coverage Average')
+    axis[0].plot(d,Fullwave,legends[0],label='S = ExH')
+    axis[0].plot(d,classical,legends[1],label='S = |E|^2/377')
+    axis[0].plot(d,rayTracing,legends[2],label='Ray Tracing')
+    axis[0].plot(d,IECSectorAverage,legends[3],label = 'IEC Sector-Coverage Average')
+    axis[0].plot(d,EMSSSectorAverage,legends[4],label = 'EMSS Sector-Coverage Average')
+    axis[0].plot(d,OET65,legends[5],label = 'FCC OET 65')
+    axis[0].plot(d,adjustedSectorS,legends[6],label = 'Adjusted Spherical Validation line')
+    axis[0].set_xlabel('Ry (m)')
+    axis[0].set_ylabel('S (W/m^2)')
+    axis[0].set_title('Spacial average results')
 
-    axis[1].plot(d,adjustedSpherical,label = 'SpacialPeakCylindrical')
-    axis[1].plot(d,adjustedSectorS,label = 'Adjusted Spherical Validation line')
-    axis[1].plot(d,OET65,label = 'FCC OET 65')
+    axis[1].plot(d,(Fullwave-adjustedSectorS)/adjustedSectorS*100,legends[2],label = 'S = ExH')
+    axis[1].plot(d,(classical-adjustedSectorS)/adjustedSectorS*100,legends[2],label = 'S = |E|^2/377')
+    axis[1].plot(d,(rayTracing-adjustedSectorS)/adjustedSectorS*100,legends[2],label = 'Ray Tracing')
+    axis[1].plot(d,(IECSectorAverage-adjustedSectorS)/adjustedSectorS*100,legends[3],label = 'IEC Sector-Coverage Average')
+    axis[1].plot(d,(EMSSSectorAverage-adjustedSectorS)/adjustedSectorS*100,legends[4],label = 'EMSS Sector-Coverage Average')
+    axis[1].plot(d,(OET65-adjustedSectorS)/adjustedSectorS*100,legends[5],label = 'FCC OET 65')
+    axis[1].set_xlabel('Ry (m)')
+    axis[1].set_ylabel('Percentage of reference results')
+    axis[1].set_title('Percentage error')
+    figure.suptitle('Validation test 3 Adjusted formula test')
+    figure.legend(labels = methods,loc='center')
+    figure.tight_layout()
 
-    plt.legend()
+    figure, (axis[0],axis[1]) = plt.subplots(1,2)   
+    axis[0].plot(d,Fullwave,legends[0],label='S = ExH')
+    axis[0].plot(d,classical,legends[1],label='S = |E|^2/377')
+    axis[0].plot(d,rayTracing,legends[2],label='Ray Tracing')
+    axis[0].plot(d,IECSectorAverage,legends[3],label = 'IEC Sector-Coverage Average')
+    axis[0].plot(d,EMSSSectorAverage,legends[4],label = 'EMSS Sector-Coverage Average')
+    axis[0].plot(d,OET65,legends[5],label = 'FCC OET 65')
+    axis[0].plot(d,simpleSectorS,legends[6],label = 'Adjusted Spherical Validation line')
+    axis[0].set_xlabel('Ry (m)')
+    axis[0].set_ylabel('S (W/m^2)')
+    axis[0].set_title('Spacial average results')
+
+    axis[1].plot(d,(Fullwave-simpleSectorS)/simpleSectorS*100,legends[2],label = 'S = ExH')
+    axis[1].plot(d,(classical-simpleSectorS)/simpleSectorS*100,legends[2],label = 'S = |E|^2/377')
+    axis[1].plot(d,(rayTracing-simpleSectorS)/simpleSectorS*100,legends[2],label = 'Ray Tracing')
+    axis[1].plot(d,(IECSectorAverage-simpleSectorS)/simpleSectorS*100,legends[3],label = 'IEC Sector-Coverage Average')
+    axis[1].plot(d,(EMSSSectorAverage-simpleSectorS)/simpleSectorS*100,legends[4],label = 'EMSS Sector-Coverage Average')
+    axis[1].plot(d,(OET65-simpleSectorS)/simpleSectorS*100,legends[5],label = 'FCC OET 65')
+    axis[1].set_xlabel('Ry (m)')
+    axis[1].set_ylabel('Percentage of reference results')
+    axis[1].set_title('Percentage error')
+    figure.suptitle('Validation test 3 simple formula test')
+    figure.legend(labels = methods,loc='center')
+    figure.tight_layout()
+
     plt.show()
 
 
 
 ##Near field
-def getEfficiency(G = 17, f = 900,A = 2.25*0.3):
+def getEfficiency(G = 42.8, f = 7550,A = 2.4**2*np.pi):
     lamda = 3*10**8/(f*10**6)
-    #return (10**(G/10)*lamda**2)/(4*np.pi*A)
+    return (10**(G/10)*lamda**2)/(4*np.pi*A)
 
-    top = 10**(G/10)*lamda**2/(4*np.pi)
-    bottom =  np.pi*2.25**2/4#np.pi*2.25**2/4
-    return top/bottom
 
-def Ssurface(power = 80, A = 2.25*0.3):
+def Ssurface(power = 80, D = 2.4):
+    A = np.pi*D**2
     return 4*power/A
 
-def Snf(G = 17, f = 900,w = 0.3,D = 2.25,power = 80):
-    A = w*D
+def Snf(G = 42.8, f = 7550,D = 2.4,power = 80):
+    A = np.pi*D**2/4
     n = getEfficiency(G, f, A)
-    return 16*n*power/(np.pi*D**2)
+    return 16*1*power/(np.pi*D**2)
 
 def St(R):
     return Snf()*Rnf()/R
 
 
-def Rnf(D = 2.25, f = 900):
+def Rnf(D = 2.4, f = 7750):
     lamda = 3*10**8/(f*10**6)
     return D**2/(4*lamda)
 
-def Rff(D = 2.25,f = 900):
+def Rff(D = 2.4,f = 7750):
     lamda = 3*10**8/(f*10**6)
     return 0.6*D**2/lamda
 
-def Sff(R, power = 80, G = 17):
+def Sff(R, power = 80, G = 42.8):
     return power*10**(G/10)/(4*np.pi*R**2) 
 
 def OET65near(R, power = 80, D = 2.25, AHPBW = 85):
@@ -825,7 +905,6 @@ def OET65near(R, power = 80, D = 2.25, AHPBW = 85):
 
 def OET65far(R,G,power = 80):
     G = 10**(G/10)
-    print('Here')
     return power*G/(4*np.pi*R**2)
 
 def OET65Modified(D = 2.25):
@@ -834,7 +913,6 @@ def OET65Modified(D = 2.25):
     return OET65near(Rtrans)*1/(Rfar/Rtrans)**2
 
 def OET65mesh(R, G, D = 2.25, f = 900,theta = None):
-    print(G)
     lamda = 3*10**8/(f*10**6)
     Rreactive = 0.62*np.sqrt(D**3/lamda)
     Rnearfield = 2*D**2/lamda
@@ -847,35 +925,25 @@ def OET65mesh(R, G, D = 2.25, f = 900,theta = None):
     return np.array(S)
     
 
-def OET65mesh2(R, f = 900,D = 2.25, a = True):
-    lamda = 3*10**8/(f*10**6)
-    Rreactive = 0.62*np.sqrt(D**3/lamda)
-    Rnearfield = 2*D**2/lamda
+def OET65meshApeture(R, f = 7550,D = 2.4):
     S = []
-    if (a == True):
-        for i in range(len(R)):
-            if R[i] < 0.5:
-                S.append(Ssurface())
-            elif np.abs(R[i]) < Rnf():
-                S.append(Snf())
-            elif np.abs(R[i]) > Rff():
-                S.append(Sff(R[i]))
-            else:
-                S.append(St(R[i]))
-        return np.array(S)
-    else:
-        for i in range(len(R)):
-            if np.abs(R[i]) < Rnearfield:
-                S.append(Snf())
-            elif np.abs(R[i]) > Rnearfield:
-                S.append(Sff(R[i]))
-            else:
-                S.append(St(R[i]))
-        return np.array(S)
+    for i in range(len(R)):
+        if R[i] < 10:
+            S.append(Ssurface(D=D/2))
+        elif np.abs(R[i]) < Rnf(D = D):
+            S.append(Snf())
+        elif np.abs(R[i]) > Rff(D = D):
+            S.append(Sff(R[i]))
+        else:
+            S.append(St(R[i]))
+    print('near field ends at {}'.format(Rnf()))
+    print('far field ends at {}'.format(Rff()))
+    return np.array(S)
+
 
 def IECSpatialPeakSectorBasic(R, power = 80, D = 2.25, AHPBW = 85):
-    AHPBW *=np.pi/180
-    return 2*power/(R*D*AHPBW)
+    AHPBW *=2*np.pi/180
+    return power/(R*D*AHPBW)
 
 def IECSpatialPeakOmniBasic(R, power = 80, D = 2.25):
     AHPBW *=np.pi/180
@@ -890,21 +958,20 @@ def IECSpatialAverageOmniBasic(R, power = 80, D = 2.25):
     return power/(R*D*2*np.pi)
 
 
-def IECmeshPeakSector(R, phi, theta, f = 900, D = 2.25):
+def IECmeshPeakSector(R, phi, theta,Gain,power = 80, f = 900, D = 2.25,y = 5*np.pi/180,G = 17, Globe = 11, VHPBW=8, AHPBW=84):
     lamda = 3*10**8/(f*10**6)
     Rnearfield = 2*D**2/lamda
     S = []
     for i in range(len(R)):
         if np.abs(R[i]) < Rnearfield:
             if np.abs(phi[i]) < np.pi/2 and np.abs(R[i]*np.cos(theta[i])) < D/2 :
-                S.append(PeakCylindricalSector(phi[i],R[i]))
+                S.append(PeakCylindricalSector(phi[i],R[i],power = power, D = D,y = y,G = G, AHPBW=AHPBW))
             else:
-                print('use')
-                S.append(AdjustedSphericalSector(theta[i], phi[i], R[i]))
+                S.append(AdjustedSphericalSector(theta[i], phi[i], R[i],power = power, VHPBW = VHPBW,AHPBW = AHPBW, D = D, G = G,Globe = Globe, y = y))
         elif np.abs(R[i]) > Rnearfield:
-            S.append(IECSpatialPeakSectorBasic(R))  
+            S.append(OET65far(R[i],Gain[i],power = power)) 
+        
     return np.array(S)
-#theta = theta, phi=phi, R = R,power = power, VHPBW=8, AHPBW=84, D = D, G=Gs, Globe=Globe, y =y 
 
 
 def IECmeshAverageSector(R, phi, theta,power = 80, f = 900, D = 2.25,y = 5*np.pi/180,G = 17, Globe = 11, VHPBW=8, AHPBW=84):
@@ -916,13 +983,12 @@ def IECmeshAverageSector(R, phi, theta,power = 80, f = 900, D = 2.25,y = 5*np.pi
             if (np.abs(phi[i]) < np.pi/2) and (np.abs(R[i]*np.cos(theta[i])) < D/2):
                 S.append(AverageCylindricalSector(phi=phi[i], R = R[i],power = power, AHPBW=AHPBW, D = D, G=G, y =y ))
             else:
-                print(i)
                 S.append(AdjustedSphericalSector(theta = theta[i], phi=phi[i], R = R[i],power = power, VHPBW=8, AHPBW=84, D = D, G=G, Globe=Globe, y =y ))
         elif np.abs(R[i]) > Rnearfield:
             S.append(IECSpatialAverageSectorBasic(power = power,R =R[i],D = D))  
     return np.array(S)
 
-def EMSSmeshPeakSector(R, phi, theta, f = 900, D = 2.25):
+def EMSSmeshPeakSector(R, phi, theta,power = 80, f = 900, D = 2.25,y = 5*np.pi/180,G = 17, Globe = 11, VHPBW=8, AHPBW=84):
     lamda = 3*10**8/(f*10**6)
     Rnearfield = 2*D**2/lamda
     S = []
@@ -931,19 +997,106 @@ def EMSSmeshPeakSector(R, phi, theta, f = 900, D = 2.25):
             if np.abs(phi[i]) < np.pi/2:
                 S.append(PeakCylindricalSector(phi[i],R[i]))
             else:
-                #S.append(AdjustedSphericalSector(theta[i], phi[i], R[i]))
-                S.append(PeakCylindricalSector(phi[i],R[i]))
+                S.append(AdjustedSphericalSector(phi[i],R[i]))
         elif np.abs(R[i]) > Rnearfield:
-            S.append(SimpleSphericalSector(theta[i], phi[i], R[i]))   
+            S.append(SimpleSphericalSector(theta[i], phi[i], R[i],power = power, VHPBW=VHPBW, AHPBW=AHPBW, D=D, G=G, Globe=Globe,y=y )) 
     return np.array(S)
 
-def EMSSmeshAverageSector(R, phi, theta, f = 900, D = 2.25):
+def EMSSmeshAverageSector(R, phi, theta,power = 80, f = 900, D = 2.25,y = 5*np.pi/180,G = 17, Globe = 11, VHPBW=8, AHPBW=84):
     lamda = 3*10**8/(f*10**6)
     Rnearfield = 2*D**2/lamda
     S = []
     for i in range(len(R)):
         if np.abs(R[i]) < Rnearfield:
-            S.append(AverageCylindricalSector(phi[i],R[i]))
+            if (np.abs(phi[i]) < np.pi/2) and (np.abs(R[i]*np.cos(theta[i])) < D/2):
+                S.append(AverageCylindricalSector(phi=phi[i], R = R[i],power = power, AHPBW=AHPBW, D = D, G=G, y =y ))
+            else:
+                S.append(AdjustedSphericalSector(theta = theta[i], phi=phi[i], R = R[i],power = power, VHPBW=8, AHPBW=84, D = D, G=G, Globe=Globe, y =y ))
         elif np.abs(R[i]) > Rnearfield:
-            S.append(SimpleSphericalSector(theta[i], phi[i], R[i]))
+            S.append(SimpleSphericalSector(theta[i], phi[i], R[i],power = power, VHPBW=VHPBW, AHPBW=AHPBW, D=D, G=G, Globe=Globe,y=y )) 
     return np.array(S)
+
+def AndrewAntennaTest():
+    IXUS_percentages = np.array([
+    1806,1806,1806,1806,1806,1806,1806,1806,1806,1806,
+    1806,902.8,902.8,902.8,902.8,902.8,902.8,902.8,902.8,902.8,
+    902.8,902.8,842.5,773.7,713.1, 659.3, 611.3, 568.4,
+    529.9, 495.2, 463.7, 435.2, 409.2, 385.5, 363.8, 343.8, 325.5, 308.6,
+    293,278.5,265.1,252.6,241,230.2,220.1,210.6,201.7,193.4,
+    185.6,178.2,171.3,164.8,158.6,152.8,147.3,142.1,137.2,132.5,
+    128,123.8
+    ])
+
+    print(len(IXUS_percentages))
+
+
+    IXUS = IXUS_percentages/100*6
+    R = np.array(np.linspace(0.5, 100, 60))
+    S = OET65meshApeture(R)
+    print(S)
+    plt.plot(R,S,'k-.',label = 'FCC OET 65')
+    plt.plot(R,IXUS,'k-', label = 'Ray Tracing')
+    plt.title('Comparison between FCC OET 65 and IXUS simulations of a apeture antenna')
+    plt.xlabel('X m')
+    plt.ylabel('S W/m^2')
+
+    plt.legend()
+
+def validationtest4():
+    x = np.array(np.linspace(30,100,8))
+    y = 0
+    z = -15
+    referenceResults = np.array([2.33, 48.5, 105, 80.7, 45.2, 22.6, 10.7, 4.99])
+    IXUS_percentage = np.array([0.04925, 1.079, 2.337, 1.794, 1.05, 0.498, 0.2353, 0.1109])
+    rayTracing = IXUS_percentage/100*6
+
+    xEff = x*np.cos(15*np.pi/180)
+    zEff = z + x*np.sin(15*np.pi/180)
+    Reff = np.sqrt((xEff)**2 + (zEff)**2)
+    thetaEff = np.pi/2 + np.arcsin(zEff/Reff)
+    phiEff = 0
+    df = pd.DataFrame(xEff,columns = ['X'])
+    df['Y'] = 0
+    df['Z'] = zEff
+    df['R'] = Reff
+    df['theta'] = np.round(thetaEff*180/np.pi)
+    df['phi'] = np.round(phiEff*180/np.pi)
+    G = GetFarField('IEC-62232-panel-antenna (4)_FarField1.ffe')
+    df = df.merge(G,how='left',on=['phi','theta'])
+    df['theta'] = thetaEff
+    df['phi'] = phiEff
+    df['OET65']= OET65mesh(Reff,df['Gain'],f = 90)*1000
+    print(df['Gain'])
+    df['IEC'] = IECmeshPeakSector(df['R'],df['phi'],df['theta'],df['Gain'],power = 80, f=90,D=2.25,y = 0, G = 17, Globe = 0,VHPBW=8.5, AHPBW=85 )*1000
+    df['EMSS'] = EMSSmeshPeakSector(df['R'],df['phi'],df['theta'],power = 80, f=90,D=2.25,y = 0, G = 17, Globe = 0,VHPBW=8.5, AHPBW=85 )*1000
+    df['referenceResults'] = referenceResults
+    df['Ray Tracing'] = rayTracing*1000
+    Feko = GetField('IEC-62232-panel-antenna_validationTest4.efe','IEC-62232-panel-antenna_validationTest4.hfe').df
+    df['S=ExH'] = Feko['Full wave']*1000
+    df['S=|E|^2/377'] = Feko['Classical']*1000
+    #df['']
+
+
+    #plotting
+    methods = ['S=ExH','S=|E|^2/377','FCC OET 65', 'IEC estimations', 'EMSS estimations','Ray Tracing' ,'Reference results']
+    markers = ['kD','k:','k--','kD','k+','k-.','k_']
+    columns = ['S=ExH','S=|E|^2/377','OET65', 'IEC', 'EMSS','Ray Tracing','referenceResults']
+    axis = [0,0]
+    figure, (axis[0],axis[1]) = plt.subplots(1,2) 
+    for method,marker,column in zip(methods,markers,columns):
+        axis[0].plot(df['X'],df[column],marker,label = method)
+        axis[1].plot(df['X'],np.abs(100*(df[column]/1000-df['referenceResults']/1000)/df['referenceResults']/1000),marker,label = method)
+    axis[0].set_xlabel('X (m)')
+    axis[0].set_ylabel('S (mW/m^2)')
+    axis[0].set_title('Far field results')
+
+    axis[1].set_xlabel('X (m)')
+    axis[1].set_ylabel('Percentage of reference results')
+    axis[1].set_title('Percentage of far field results')
+
+    figure.suptitle('Validation test 4 Results')
+    figure.tight_layout()
+    figure.legend(labels=methods,loc = 'center')
+    plt.show()
+
+    print(df)

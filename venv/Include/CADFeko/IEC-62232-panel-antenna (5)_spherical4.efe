@@ -1,0 +1,18 @@
+##File Type: Electric Near Field
+##File Format: 8
+##Source: IEC-62232-panel-antenna (5)
+##Date: 2022-10-28 18:41:34  
+** File exported by Altair Feko - Solver (seq) Version 2022-14825 from 2022-03-31
+
+
+#Configuration Name: humanStandardConfiguration1
+#Request Name: spherical4
+#Frequency:   9.00000000E+008
+#Coordinate System: Cartesian
+#No. of X Samples: 1
+#No. of Y Samples: 1
+#No. of Z Samples: 1
+#Result Type: Electric Field Values
+#No. of Header Lines: 1
+#         "X"                "Y"                "Z"              "Re(Ex)"           "Im(Ex)"           "Re(Ey)"           "Im(Ey)"           "Re(Ez)"           "Im(Ez)"    
+    3.86370331E+001    1.03527618E+001   -5.00000000E+000    6.00335341E-002    1.35967431E-001    9.79479030E-002    1.17384306E-001    9.37851777E-001    1.38677210E+000
